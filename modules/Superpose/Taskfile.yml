@@ -1,0 +1,21 @@
+version: '3'
+
+vars:
+  VERSION: "1.0"
+  AUTHOR: Jean-Michel Girard
+
+tasks:
+  manifest:
+    desc: Create the module manifest
+    summary: Create the module manifest
+    cmds: 
+      - >
+        pwsh -NoProfile -NonInteractive  -c "
+        New-ModuleManifest -Path Superpose.psd1
+        -ModuleVersion '{{.VERSION}}'
+        -Author '{{.AUTHOR}}'
+        -Guid 553ec8f8-09a2-4375-af03-5a1b87ba6987
+        -CompanyName JeanMGirard
+        "
+    generates:
+      - Superpose.psd1
