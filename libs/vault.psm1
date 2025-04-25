@@ -4,13 +4,13 @@
 .SYNOPSIS
 
 .DESCRIPTION
-Makes sure that vault is authenticated
+  Makes sure that vault is authenticated
 
 .PARAMETER Check Returns false instead of throwing an exception if not connected.
 .PARAMETER Silent Do not write anything to console
 
 .EXAMPLE
-Assert-VaultConnected
+  Assert-VaultConnected
 #>
 function Assert-VaultConnected {
   [CmdletBinding()]
@@ -27,19 +27,28 @@ function Assert-VaultConnected {
     if ($Check){ return $false }
     exit 1
   }
-  if ($Check){ return $true }
+  try {
+    vault kv list -mount=secret -non-interactive "" | Out-Null
+    if ($Check){ return $true; }
+  } catch {
+    if (-not $Silent){
+      Write-Error "Vault is not connected. Please run Connect-Vault to authenticate."
+    }
+    if ($Check){ return $false }
+    exit 1
+  }
 }
 
 <#
 .SYNOPSIS
 
 .DESCRIPTION
-Makes sure that vault is authenticated
+  Makes sure that vault is authenticated
 
 .PARAMETER Token the vault token to use
 
 .EXAMPLE
-Connect-Vault
+  Connect-Vault
 #>
 function Connect-Vault {
   [CmdletBinding()]
@@ -81,7 +90,40 @@ function Connect-Vault {
 .SYNOPSIS
 
 .DESCRIPTION
-Copies a secret from one path to another
+  Delete a secret
+
+.PARAMETER Token the vault token to use
+
+.EXAMPLE
+  Remove-VaultSecret "example/secret"
+  Remove-VaultSecret -Prefix "example" "secret"
+#>
+function Remove-VaultSecret {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory, Position=0)][string] $Name,
+    [Parameter()][string] $Prefix
+  )
+  
+  begin {
+    Assert-VaultConnected
+  }
+  process {
+    if ($Prefix){ $Name="$Prefix/$Name".Replace("//", "/"); }
+    try {
+      vault kv metadata delete -mount="secret" $Name | Out-Null
+    }
+    catch { Write-Error "Error while trying to delete secret ($Name): $_" }
+  }
+  end {}
+}
+
+
+<#
+.SYNOPSIS
+
+.DESCRIPTION
+  Copies a secret from one path to another
 
 .PARAMETER Source The secret to copy
 .PARAMETER Dest The destination path(s) of the secret to copy
@@ -90,13 +132,13 @@ Copies a secret from one path to another
 .PARAMETER Force Overwrite the secret if it already exists
 
 .EXAMPLE
-Copy-VaultSecret "beneva/ad/perception/dev/ad-perception-dev1/activemqfacade" "beneva/ad/perception/dev/ad-perception-sit1/activemqfacade"
+  Copy-VaultSecret "team/dev/app/secret_1" "team/dev/app/secret_2"
 
 .EXAMPLE
-Copy-VaultSecret -Prefix "beneva/ad/perception/dev" "ad-perception-dev1/activemqfacade" "ad-perception-sit1/activemqfacade"
+  Copy-VaultSecret -Prefix "team/dev" "app/secret_1" "app/secret_2"
 
 .EXAMPLE
-Copy-VaultSecret -Delete -Prefix "beneva/ad/perception/dev" "ad-perception-dev1/activemqfacade" "ad-perception-sit1/activemqfacade"
+  Copy-VaultSecret -Delete -Prefix "team/dev" "app/secret_1" "app/secret_2"
 #>
 function Copy-VaultSecret {
   [CmdletBinding()]
@@ -113,7 +155,7 @@ function Copy-VaultSecret {
   }
   process {
     
-    if($Prefix){ $Source="$Prefix/$Source" }
+    if($Prefix){ $Source="$Prefix/$Source".Replace("//", "/") }
     if(-not (Test-VaultSecretExists $Source)){
       Write-Error "Secret $Source does not exist"
       exit 1
@@ -133,7 +175,7 @@ function Copy-VaultSecret {
     }
 
     if ($Delete){
-      vault kv metadata delete -mount="secret" $Source | Out-Null
+      Remove-VaultSecret $Source
     }
   }
   end { }
@@ -144,16 +186,16 @@ function Copy-VaultSecret {
 .SYNOPSIS
 
 .DESCRIPTION
-Check if a secret exists
+  Check if a secret exists
 
 .PARAMETER Name The secret
 .PARAMETER Prefix A prefix for the secret
 
 .EXAMPLE
-Test-VaultSecretExists "beneva/ad/perception/dev/ad-perception-sit1/activemqfacade"
+  Test-VaultSecretExists "team/dev/app/secret_name"
 
 .EXAMPLE
-Test-VaultSecretExists -Prefix "beneva/ad/perception/dev" "ad-perception-dev1/activemqfacade"
+  Test-VaultSecretExists -Prefix "team/dev" "app/secret_name"
 #>
 function Test-VaultSecretExists {
   [CmdletBinding()]
@@ -166,7 +208,7 @@ function Test-VaultSecretExists {
     Assert-VaultConnected
   }
   process {
-    if ($Prefix){ $Name="$Prefix/$Name" }
+    if ($Prefix){ $Name="$Prefix/$Name".Replace("//", "/"); }
     try {
       $data=$(vault kv get -non-interactive -mount="secret" -format="json" $Name 2>$null)
       if ($data){ return $true }
@@ -177,8 +219,83 @@ function Test-VaultSecretExists {
   end {}
 }
 
+<#
+.SYNOPSIS
+
+.DESCRIPTION
+  Lists all secrets in a path
+
+.PARAMETER Prefix A prefix for the secrets to list
+.PARAMETER Silent Do not write anything to console
+
+.EXAMPLE
+  Find-VaultSecrets "team/dev/app/secret_name"
+
+.EXAMPLE
+  Find-VaultSecrets  "team/dev/app/secret_name" -Silent
+
+.OUTPUTS
+  [string[]] The list of secrets found
+#>
+function Find-VaultSecrets {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory=$false, Position=0)][string] $Prefix="",
+    [Parameter()][switch] $Silent=$false
+  )
+  
+  begin {
+    Assert-VaultConnected
+  }
+  process {
+    try {
+      $results=(vault kv list -non-interactive -mount="secret" -format="json" $Prefix  2>&1  | ConvertFrom-Json)
+    }
+    catch {
+      if (-not $Silent){
+        Write-Error "Error while trying to list secrets at ($Prefix)"
+      }
+      return @()
+    }
+    
+    if ($null -eq $results){ return @(); }
+    elseif ($results -is [System.String]){ $results=@($results); }
+    
+    $newResults=@()
+    $i=0
+    foreach ($item in $results | ForEach-Object { "$_" } | Where-Object { $_ -ne "" }) {
+      $i++
+      $current="$Prefix/$item".Replace("//", "/")
+      Write-Debug " * $current"
+
+      if (-not $Silent){
+        Write-Progress -Activity "Listing Secrets" `
+          -Status "$i/$($results.Count) - ($($newResults.Count) found)" `
+          -PercentComplete (($i / $results.Count) * 100) `
+          -CurrentOperation "$current"
+      }
+
+      if ($current.endswith("/")) {
+        try { 
+          $subResults=$(Find-VaultSecrets -ErrorAction SilentlyContinue $current -Silent)
+          $newResults+=$subResults;
+        }
+        catch { $newResults+=@() }
+      }
+      else {
+        $newResults+=@($current)
+      }
+    }
+    return $newResults
+  }
+}
+
 
 Export-ModuleMember -Function `
   'Copy-VaultSecret', 'Assert-VaultConnected', `
-  'Test-VaultSecretExists', 'Connect-Vault'
+  'Test-VaultSecretExists', 'Connect-Vault', `
+  'Remove-VaultSecret', 'Find-VaultSecrets'
+
+
+
 

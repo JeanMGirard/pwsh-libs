@@ -60,6 +60,8 @@ function Search-Term {
   return $info
 }
 
+function Search-Verbs {  Get-Verb | Select-Object -ExpandProperty Verb | Sort-Object; }
+
 function Search-PSGallery {
   param(
     [parameter(position=0)][String] $name,
@@ -68,4 +70,9 @@ function Search-PSGallery {
   Find-Module -Name *$name*  -Repository PSGallery
 }
 
+
+
+Set-Alias -Name verbs -Value Search-Verbs
+
 Export-ModuleMember -Function 'Search-*'
+Export-ModuleMember -Alias verbs
