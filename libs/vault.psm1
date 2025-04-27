@@ -43,20 +43,22 @@ function Assert-VaultConnected {
 .SYNOPSIS
 
 .DESCRIPTION
-  Makes sure that vault is authenticated
+Makes sure that vault is authenticated
 
 .PARAMETER Token the vault token to use
+.PARAMETER Refresh forces a new token
 
 .EXAMPLE
-  Connect-Vault
+Connect-Vault
 #>
 function Connect-Vault {
   [CmdletBinding()]
   param(
-    [Parameter(Position=0)][string] $Token=$env:VAULT_TOKEN
+    [Parameter(Position=0)][string] $Token=$env:VAULT_TOKEN,
+    [Parameter()][switch] $Refresh=$False
   )
   
-  if (Assert-VaultConnected -Silent -Check){ 
+  if ((-not $Refresh) -and (Assert-VaultConnected -Silent -Check)){ 
     Write-Host "Vault already connected"
     return $true 
   }
@@ -291,10 +293,88 @@ function Find-VaultSecrets {
 }
 
 
+<#
+.SYNOPSIS
+
+.DESCRIPTION
+  Sends all values from one secret to another
+
+.PARAMETER Prefix A prefix for the secrets to list
+.PARAMETER Source The source secret
+.PARAMETER Dest The destination secret
+.PARAMETER Overwrite Overwrite the destination secret values if they exists
+.PARAMETER Delete Delete the source secret after copying
+
+.EXAMPLE
+  Merge-VaultSecrets "team/dev/app/secret_name" "team/dev/app/secret_name2"
+  Merge-VaultSecrets -Prefix "team/dev" "app/secret_name" "app/secret_name2"
+  Merge-VaultSecrets -Prefix "team/dev" "app/secret_name" "app/secret_name2" -Overwrite -Delete
+  Merge-VaultSecrets -Prefix "team/dev" "app/secret_name" "app/secret_name2" -Delete
+  Merge-VaultSecrets -Prefix "team/dev" "app/secret_name" "app/secret_name2" -Overwrite
+
+#>
+function Merge-VaultSecrets {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory, Position=0)][string] $Source,
+    [Parameter(Mandatory, Position=1)][string] $Dest,
+    [Parameter()][string] $Prefix,
+    [Parameter()][switch] $Overwrite=$false,
+    [Parameter()][switch] $Delete=$false
+  )
+  
+  begin {
+    Assert-VaultConnected
+  }
+  process {
+    if ($Prefix){ 
+      $Source="$Prefix/$Source".Replace("//", "/") 
+      $Dest="$Prefix/$Dest".Replace("//", "/")
+    }
+    
+    if (-not (Test-VaultSecretExists $Source)){
+      Write-Error "Secret $Source does not exist"
+      exit 1
+    }
+
+    $newData=@{}
+    if (Test-VaultSecretExists $Dest){
+      $data=$(vault kv get -mount="secret" -format="json" -field="data" "$Dest" | ConvertFrom-Json)
+      foreach ($obj in $data.PSObject.Properties) {
+        $dataParams+="$($obj.Name)=$($obj.Value)"
+        $newData[$obj.Name]=$obj.Value
+      }
+    }
+
+    $data=$(vault kv get -mount="secret" -format="json" -field="data" "$Source" | ConvertFrom-Json)
+    foreach ($obj in $data.PSObject.Properties) {
+      if($newData.Keys -contains $obj.Name){
+        if ($Overwrite) {
+          $newData[$obj.Name]=$obj.Value
+        }
+      }
+      else {
+        $newData[$obj.Name]=$obj.Value
+      }
+    }
+
+    $dataParams=@()
+    foreach ($key in $newData.Keys) {
+      $dataParams+="$($key)=$($newData[$key])"
+    }
+
+    vault kv put -mount="secret" -format="json" -field="data" $Dest ${dataParams} | Out-Null
+    if ($Delete){  Remove-VaultSecret $Source; }
+  }
+  end {}
+}
+
+
 Export-ModuleMember -Function `
   'Copy-VaultSecret', 'Assert-VaultConnected', `
   'Test-VaultSecretExists', 'Connect-Vault', `
-  'Remove-VaultSecret', 'Find-VaultSecrets'
+  'Remove-VaultSecret', 'Find-VaultSecrets', `
+  'Merge-VaultSecrets'
 
 
 
