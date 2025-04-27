@@ -15,6 +15,8 @@ New-Variable -Name VaultLoginTTL -Value 5 -Scope Script -Force
 
 .EXAMPLE
   Assert-VaultConnected
+  Assert-VaultConnected -Check -Silent
+
 #>
 function Assert-VaultConnected {
   [CmdletBinding()]
@@ -42,7 +44,9 @@ function Assert-VaultConnected {
     }
     try {
       vault kv list -mount=secret -non-interactive "" | Out-Null
-      New-Variable -Name VaultLoginTs -Value ([System.Diagnostics.Stopwatch]::StartNew()) -Scope Script -Force
+      if ($null -eq $VaultLoginTs) {
+        New-Variable -Name VaultLoginTs -Value ([System.Diagnostics.Stopwatch]::StartNew()) -Scope Script -Force
+      }
       New-Variable -Name VaultLoginSuccess -Value $true -Scope Script -Force
       if ($Check){ return $true; }
     } catch {
@@ -104,6 +108,8 @@ function Connect-Vault {
 
   vault login $Token | Out-Null
   $env:VAULT_TOKEN = $Token
+  New-Variable -Name VaultLoginTs -Value ([System.Diagnostics.Stopwatch]::StartNew()) -Scope Script -Force
+  New-Variable -Name VaultLoginSuccess -Value $true -Scope Script -Force
 }
 
 <#
