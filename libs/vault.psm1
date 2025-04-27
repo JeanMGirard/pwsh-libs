@@ -1,5 +1,9 @@
 
 
+New-Variable -Name VaultLoginTs -Value $null -Scope Script -Force
+New-Variable -Name VaultLoginSuccess -Value $false -Scope Script -Force
+New-Variable -Name VaultLoginTTL -Value 5 -Scope Script -Force
+
 <#
 .SYNOPSIS
 
@@ -18,25 +22,39 @@ function Assert-VaultConnected {
     [Parameter()][switch] $Check,
     [Parameter()][switch] $Silent
   )
+  begin {
+    if ($VaultLoginSuccess -and ($null -ne $VaultLoginTs)) {
+      $elapsed=$VaultLoginTs.Elapsed
+      if ($elapsed.TotalMinutes -lt $VaultLoginTTL) {
+        return $true
+      }
+    }
+    New-Variable -Name VaultLoginSuccess -Value $false -Scope Script -Force
+    
 
-  if ((-not $env:VAULT_TOKEN) -or (-not $env:VAULT_ADDR)){
-    if (-not $Silent){
-      Write-Error "Vault token and address are required!"
-      Write-Error "Set VAULT_ADDR and VAULT_TOKEN environment variables to correct this"
+    if ((-not $env:VAULT_TOKEN) -or (-not $env:VAULT_ADDR)){
+      if (-not $Silent){
+        Write-Error "Vault token and address are required!"
+        Write-Error "Set VAULT_ADDR and VAULT_TOKEN environment variables to correct this"
+      }
+      if ($Check){ return $false }
+      exit 1
     }
-    if ($Check){ return $false }
-    exit 1
-  }
-  try {
-    vault kv list -mount=secret -non-interactive "" | Out-Null
-    if ($Check){ return $true; }
-  } catch {
-    if (-not $Silent){
-      Write-Error "Vault is not connected. Please run Connect-Vault to authenticate."
+    try {
+      vault kv list -mount=secret -non-interactive "" | Out-Null
+      New-Variable -Name VaultLoginTs -Value ([System.Diagnostics.Stopwatch]::StartNew()) -Scope Script -Force
+      New-Variable -Name VaultLoginSuccess -Value $true -Scope Script -Force
+      if ($Check){ return $true; }
+    } catch {
+      if (-not $Silent){
+        Write-Error "Vault is not connected. Please run Connect-Vault to authenticate."
+      }
+      if ($Check){ return $false }
+      exit 1
     }
-    if ($Check){ return $false }
-    exit 1
   }
+  process {}
+  end {}
 }
 
 <#
