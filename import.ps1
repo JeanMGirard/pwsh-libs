@@ -24,12 +24,9 @@ Import-Module "$PSScriptRoot/libs/wsl.psm1"
 ### emodipt-extend  kushal night-owl powerlevel10k_rainbow
 
 # Write-Host "  completions..."
-. "$PSScriptRoot/completions/aws.ps1"
-. "$PSScriptRoot/completions/docker.ps1"
-. "$PSScriptRoot/completions/flux.ps1"
-. "$PSScriptRoot/completions/helm.ps1"
-. "$PSScriptRoot/completions/kubectl.ps1"
-. "$PSScriptRoot/completions/podman.ps1"
+if (Test-Path "$PSScriptRoot/completions/_all.ps1") {
+  . "$PSScriptRoot/completions/_all.ps1"
+}
 
 # Write-Host "  aliases..."
 . $PSScriptRoot/aliases.ps1

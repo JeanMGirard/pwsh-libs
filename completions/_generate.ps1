@@ -1,7 +1,9 @@
 
+$ALL_COMPLETIONS_FILE = "$PSScriptRoot/_all.ps1"
 
 
-foreach ($cli in @("kubectl", "docker", "helm", "podman")){
+# Generates completion files -----------------------------------------------------------------
+foreach ($cli in @("kubectl", "docker", "helm", "flux", "podman", "mongocli", "atlas")){
   Write-Host "Generation Completion for $cli"
 
   if (Get-Command $cli){
@@ -14,3 +16,14 @@ foreach ($cli in @("kubectl", "docker", "helm", "podman")){
 }
 
 
+
+# Generates _all.ps1 ------------------------------------------------------------------------
+if (Test-Path $ALL_COMPLETIONS_FILE) {
+  Remove-Item -Path $ALL_COMPLETIONS_FILE
+}
+Get-ChildItem -Path $PSScriptRoot -Filter "*.ps1" | Where-Object { -not $_.Name.startsWith('_') } | ForEach-Object {
+  Add-Content -Path $ALL_COMPLETIONS_FILE -Value ([Environment]::NewLine)
+  Add-Content -Path $ALL_COMPLETIONS_FILE -Value (Get-Content -Path $_.FullName)
+}
+
+# --------------------------------------------------------------------------------------------
