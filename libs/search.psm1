@@ -60,7 +60,7 @@ function Search-Term {
   return $info
 }
 
-function Search-Verbs {  Get-Verb | Select-Object -ExpandProperty Verb | Sort-Object; }
+function Search-Verbs {  Get-Verb | Sort-Object -Property Verb | Format-Wide -Property Verb -Column 4; }
 
 function Search-PSGallery {
   param(
