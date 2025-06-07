@@ -1,0 +1,1300 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <title>Scheduler</title>
+   <style type='text/css'>
+   <!--
+
+      /*
+
+'##################################################################################################
+'## 
+'##      Copyright (c) 2010 TCPconsulting, LLC.
+'##                  All Rights Reserved.
+'## 
+'## 
+'## 
+'## DISCLAIMER:
+'## 
+'##      Disclaimer of Warranty
+'##
+'##      This code and information is provided "AS IS" without warranty of any kind, 
+'## either expressed or implied, including but not limited to the implied warranties 
+'## of merchantability and/or fitness for a  particular purpose. Good data processing procedure
+'## dictates that any program/code be thoroughly tested with non-critical data before relying on it. 
+'## The user must assume the entire risk of using the program. The developer does not retain 
+'## any liability for data loss, loss of profits or any other kind of damage caused through
+'## the use of this product.
+'##
+'##
+'##   Version: 1.0.10 [10 Nov 2010 14:40]
+'##
+'##
+'##################################################################################################
+
+
+*/
+
+A:hover {
+	color: #ff0000; text-decoration: none; font-family: Tahoma, Verdana; font-size: 11px;
+}
+
+a, A:link, a:visited, a:active {
+	color: #0000aa; text-decoration: none; font-family: Tahoma, Verdana; font-size: 11px;
+}
+
+p, tr, td, ul, li {
+	color: #000000; font-family: Tahoma, Verdana; font-size: 11px;
+}
+
+.hdr1_b13 {
+	color: #ffffff; background: #4682B4; font-weight: bold; font-family: Tahoma, Verdana; font-size: 13px; margin: 0px; padding: 2px;
+}
+   -->
+   </style>
+
+   <script type="text/javascript" >
+
+// #####
+// ## Class::CSupportBase ()
+// ## return: none - constructor;
+function CSupportBase () {
+   if (CSupportBase.caller != CSupportBase.getInstance) {
+       throw new Error ("There is no public constructor for CSupportBase.");
+   }
+
+   this.m_plsWaitBoxCnt = 0;
+   this.m_plsWaitBoxId = "divCSupportBasePleaseWait";
+}
+
+//defining static property
+CSupportBase.__instance = null;
+
+
+// #####
+// ## Class::CSupportBase::getInstance ()
+// ## return: instance of CSupportBase class;
+CSupportBase.getInstance = function() {
+   if (this.__instance == null) {
+      this.__instance = new CSupportBase();
+   }
+
+   return this.__instance;
+}
+
+
+// #####
+// ## Class::CSupportBase::toggleTopLayer (topLayerDivID, fShow) // fShow - true || false;
+// ## return: none;
+function CSupportBase_toggleTopLayer (topLayerDivID, fShow) { // return: none
+   var oGuiElem = document.getElementById ? document.getElementById(topLayerDivID) : document.all[topLayerDivID];
+
+   if (this.isEmpty(oGuiElem)) return;
+
+   var oGuiElemStyle = oGuiElem.style;
+   var divPos = this.getElemPos (oGuiElem);
+
+   if (!fShow && this.isElemVisible (topLayerDivID) == false) return; // no action required
+
+   var aSel = document.getElementsByTagName ("SELECT");
+   for (var iSel = 0; iSel < aSel.length; iSel++) {
+      if (aSel[iSel].name == oGuiElem.name) continue; // CXmlGuiMainArea !!!
+
+      var elemPos = this.getElemPos (aSel[iSel]);
+
+      if ( (elemPos.x > divPos.x && elemPos.x < (divPos.x + divPos.w)
+         || (elemPos.x + elemPos.w) > divPos.x && (elemPos.x + elemPos.w) < (divPos.x + divPos.w)) 
+         
+         && (elemPos.y > divPos.y && elemPos.y < (divPos.y + divPos.h)
+         || (elemPos.y + elemPos.h) > divPos.y && (elemPos.y + elemPos.h) < (divPos.y + divPos.h)) ) {
+
+         if (fShow) {
+            if (this.isEmpty (aSel[iSel].tabTmpId)) {
+               aSel[iSel].prevVisibilityVal = aSel[iSel].style.visibility;
+               aSel[iSel].tabTmpId = iSel;
+            }
+         } else {
+            aSel[iSel].prevVisibilityVal = "";
+            aSel[iSel].tabTmpId = "";
+         }
+         
+         aSel[iSel].style.visibility = document.layers ? (fShow ? "hide" : aSel[iSel].prevVisibilityVal) : (fShow ? "hidden" : aSel[iSel].prevVisibilityVal);
+      }
+   }
+   
+   oGuiElemStyle.visibility = document.layers ? (fShow ? "show" : "hide") : (fShow ? "visible" : "hidden");
+}
+
+
+// #####
+// ## Class::CSupportBase::expandDiv (divId, expandHBy)
+// ## return: none;
+function CSupportBase_expandDiv (divId, expandHBy) {
+   var oDiv = document.getElementById (divId);
+
+   if (this.isEmpty (oDiv)) return;
+
+   var currHeight = parseInt (oDiv.style.height);
+   
+   var expandBy = parseInt (expandHBy);
+
+   if (currHeight + expandBy >= 200) oDiv.style.height = currHeight + expandBy;
+}
+
+
+// #####
+// ## Class::CSupportBase::isElemVisible (topLayerDivID);
+// ## return: top layer visibility status;
+function CSupportBase_isElemVisible (topLayerDivID) { // return: top layer visibility status
+   if (this.isEmpty(topLayerDivID)) return false;
+
+   var oGuiElem = document.getElementById ? document.getElementById(topLayerDivID) : document.all[topLayerDivID];
+   
+   if (this.isEmpty(oGuiElem)) return false;
+
+   var oGuiElemStyle = oGuiElem.style;
+
+   return document.layers ? (oGuiElemStyle.visibility == "show" ? true : false) : (oGuiElemStyle.visibility == "visible" ? true : false);
+}
+
+
+// #####
+// ## Class::CSupportBase::addEventHandler (oElement, eventName, func)
+// ## return: true || false;
+function CSupportBase_addEventHandler (oElement, eventName, func) { // return: true || false
+   if (oElement.addEventListener) {
+      return oElement.addEventListener (eventName, func, false);
+   } else if (oElement.attachEvent) { 
+      return oElement.attachEvent ("on" + eventName, func); 
+   } else { 
+      return false; 
+   } 
+}
+
+
+// #####
+// ## Class::CSupportBase::pleaseWaitBox (fShow) // fShow - true || false;
+// ## return: none;
+function CSupportBase_pleaseWaitBox (fShow) { // return: none
+   fShow ? this.m_plsWaitBoxCnt++ : (this.m_plsWaitBoxCnt > 0 ? this.m_plsWaitBoxCnt-- : "");
+
+   var oPlsWaitBox = document.getElementById (this.m_plsWaitBoxId);
+
+   if (this.isEmpty (oPlsWaitBox)) {
+      var stylePlsWait = "position:absolute; top:300px; left:475px; width:300px; color:#000033; background-color:#DBEAF5; layer-background-color:#DBEAF5; z-index:99; visibility:hidden;";
+
+      // insertion hides value of element <input type='password' .... [document.getElementById (Id).value], to fix issue call CSupportBase.getInstance().pleaseWaitBox(false) in onLoad method;
+      document.body.innerHTML +=  "<div name='CSupport' id='"+ this.m_plsWaitBoxId +"' style='"+ stylePlsWait +"'><table width='100%' height='100' border='1'><tr><th>Please Wait ...</th></tr></table></div>";
+
+      this.addEventHandler (window, 'scroll', this.scrollHandler);
+   }
+
+   if ((!fShow && this.m_plsWaitBoxCnt == 0) || fShow) { 
+      this.toggleTopLayer (this.m_plsWaitBoxId, fShow);
+   }
+}
+
+
+// #####
+// ## Class::CSupportBase::scrollHandler ();
+// ## return: none;
+function CSupportBase_scrollHandler () { // return: none
+   var oSupportBase = CSupportBase.getInstance();
+
+   var oPlsWaitBox = document.getElementById (oSupportBase.m_plsWaitBoxId);
+   
+   if (oSupportBase.isEmpty (oPlsWaitBox)) {
+      return;
+   }
+
+   var style = oPlsWaitBox.style;
+
+   if (oSupportBase.isElemVisible (oSupportBase.m_plsWaitBoxId)) {
+      oSupportBase.toggleTopLayer (oSupportBase.m_plsWaitBoxId, false);
+
+      style.top = document.body.scrollTop + 300;
+      
+      oSupportBase.toggleTopLayer (oSupportBase.m_plsWaitBoxId, true);
+   }
+}
+
+
+// #####
+// ## Class::CSupportBase::getElemPos (oElem)
+// ## return: actual elem position in a document;
+function CSupportBase_getElemPos (oElem) { // return: actual elem position in a document
+   var left = 0;
+   var top = 0;
+   var elemWidth = oElem.offsetWidth;
+   var elemHeight = oElem.offsetHeight;
+
+   while (oElem.offsetParent) {
+      left += oElem.offsetLeft;
+      top += oElem.offsetTop;
+      oElem = oElem.offsetParent;
+   }
+
+   left += oElem.offsetLeft;
+   top += oElem.offsetTop;
+
+   return {
+      x:left,
+      y:top,
+      w:elemWidth,
+      h:elemHeight
+   };
+}
+
+
+// #####
+// ## Class::CSupportBase::isEmpty (val)
+// ## return: true || false;
+function CSupportBase_isEmpty (val) {
+   if (typeof (val) == "object" && val != null) return false;
+
+   if (typeof (val) == "object" && val == undefined) return true;
+
+   if (val == "" || val == undefined || val == null) return true;
+
+   return false;
+}
+
+
+// #####
+// ## Class::CSupportBase::getRequestObj ()
+// ## return: Microsoft.XMLHTTP object;
+function CSupportBase_getRequestObj () {
+   var oHttpRequest;
+
+   try {
+      if (window.XMLHttpRequest && !(window.ActiveXObject)) {
+         oHttpRequest = new XMLHttpRequest();
+      } else if (window.ActiveXObject) { // if IE/Windows
+         oHttpRequest = new ActiveXObject ("Microsoft.XMLHTTP");
+      }
+   } catch (exp) {
+      throw new Error ("In order for this application to work you need to allow ActiveX control to run.");
+   }
+   
+   return oHttpRequest;
+}
+
+
+CSupportBase.prototype.toggleTopLayer = CSupportBase_toggleTopLayer;
+CSupportBase.prototype.expandDiv = CSupportBase_expandDiv;
+CSupportBase.prototype.isElemVisible = CSupportBase_isElemVisible;
+CSupportBase.prototype.addEventHandler = CSupportBase_addEventHandler;
+CSupportBase.prototype.pleaseWaitBox = CSupportBase_pleaseWaitBox;
+CSupportBase.prototype.scrollHandler = CSupportBase_scrollHandler;
+CSupportBase.prototype.getElemPos = CSupportBase_getElemPos;
+CSupportBase.prototype.isEmpty = CSupportBase_isEmpty;
+CSupportBase.prototype.getRequestObj = CSupportBase_getRequestObj;
+// ## /Class::CSupportBase
+// #####
+
+   </script>
+   <script type="text/javascript" >
+
+// #####
+// ## Class::CSupport ()
+// ## return: none - constructor;
+function CSupport () {
+   if (CSupport.caller != CSupport.getInstance) {
+       throw new Error ("There is no public constructor for CSupport.");
+   }
+
+   this.m_oShell = undefined;
+   this.m_oFso = undefined;
+   this.m_oNet = undefined;
+   this.m_newLineChar = "\r\n";
+
+   this.__instance = null;
+}
+
+//defining static property
+CSupport.__instance = null;
+
+
+// #####
+// ## Class::CSupport::getInstance ()
+// ## return: instance of CSupport class;
+CSupport.getInstance = function() {
+   if (this.__instance == null) {
+      this.__instance = new CSupport();
+   }
+
+   return this.__instance;
+}
+
+
+// #####
+// ## Class::CSupport::getShellObj ()
+// ## return: WScript.Shell object;
+function CSupport_getShellObj () {
+   if (this.m_oShell == undefined) {
+      try {
+         this.m_oShell = new ActiveXObject ("WScript.Shell");   
+      } catch (exp) {
+         this.disableAccessAll ();
+
+         throw new Error ("In order for this application to work you need to allow ActiveX control to run.");
+      }
+   }
+
+   return this.m_oShell;
+}
+
+
+// #####
+// ## Class::CSupport::getFsoObj ()
+// ## return: Scripting.FileSystemObject object;
+function CSupport_getFsoObj () {
+   if (this.m_oFso == undefined) {
+      try {
+         this.m_oFso = new ActiveXObject("Scripting.FileSystemObject");
+      } catch (exp) {
+         this.disableAccessAll ();
+
+         throw new Error ("In order for this application to work you need to allow ActiveX control to run.");
+      }
+   }
+
+   return this.m_oFso;
+}
+
+
+// #####
+// ## Class::CSupport::getNetworkObj ()
+// ## return: WScript.Network object;
+function CSupport_getNetworkObj () {
+   if (this.m_oNet == undefined) {
+      try {
+         this.m_oNet = new ActiveXObject ("WScript.Network");   
+      } catch (exp) {
+         this.disableAccessAll ();
+
+         throw new Error ("In order for this application to work you need to allow ActiveX control to run.");
+      }
+   }
+
+   return this.m_oNet;
+}
+
+
+// #####
+// ## Class::CSupport::getRequestObj ()
+// ## return: Microsoft.XMLHTTP object;
+function CSupport_getRequestObj () {
+   return CSupportBase.getInstance().getRequestObj ();
+}
+
+
+// #####
+// ## Class::CSupport::readFile (fileLoc, fDel)
+// ## return: file content or will raise exception;
+function CSupport_readFile (fileLoc, fDel) { // return: file content or will raise exception
+   var expandFileLoc = this.getShellObj().ExpandEnvironmentStrings (fileLoc);
+   var oReqObj;
+
+   try {
+      oReqObj = this.getRequestObj();
+      oReqObj.open ("GET", expandFileLoc, false);   
+      oReqObj.send (null);
+
+      if (fDel == true) this.deleteFile (fileLoc);
+   } catch (exp) {
+      throw new Error ("CSupport::readFile\n\n"+ exp.description);
+   }
+
+   return oReqObj.responseText;
+}
+
+
+// #####
+// ## Class::CSupport::writeToFile (fileLoc, data, [bAppend, bNotAsciiFile])
+// ## return: "" - ok || error message;
+function CSupport_writeToFile (fileLoc, data, bAppend, bNotAsciiFile) { // return: "" - ok || error message
+   var ioMode = bAppend == true ? 8 : 2; // ForAppending : ForWriting
+   var iFileFormat = bNotAsciiFile == true ? -1 : 0; // Open file as Unicode : ASCII
+   var errMsg = "";
+
+   try {
+      fileLoc = this.getShellObj().ExpandEnvironmentStrings (fileLoc);
+
+/*
+      // to write non-ASCII characters
+      var dataEncoded = "";
+      for (var chIndx = 0; chIndx < data.length; chIndx++) {
+         var ch = data.charAt(chIndx);
+         var chUnicode = data.charCodeAt(chIndx);
+
+         if (chUnicode > 255) ch = encodeURI(ch);
+            dataEncoded += ch;
+         }
+      }
+
+      data = dataEncoded;
+*/
+
+      var oStream = this.getFsoObj().OpenTextFile (fileLoc, ioMode, true, iFileFormat);
+      oStream.write (data +"\n");
+
+      oStream.Close();
+   } catch (exp) {
+      errMsg = "Error occurred while writing to file:";
+      errMsg += "\n\nFile: "+ fileLoc;
+      errMsg += "\n\nNumber: " + exp.number;
+      errMsg += "\nDescription: " + exp.description;
+   }
+
+   return errMsg;
+}
+
+      
+// #####
+// ## Class::CSupport::deleteFile (fileLoc)
+// ## return: none;
+function CSupport_deleteFile (fileLoc) { // return: none
+   this.getShellObj().Run ("CMD /C DEL /F /Q \""+ fileLoc +"\"", 0, true);
+}
+
+
+// #####
+// ## Class::CSupport::disableAccess (sectionName, fAccess)
+// ## return: previous stat of the provided section;
+function CSupport_disableAccess (sectionName, fAccess) { // return: previous stat of the provided section
+   var oGuiObj = document.getElementById (sectionName);
+   var bPrevStat = true;
+
+   if (this.isEmpty (oGuiObj)) {
+      if (sectionName == "CSupport_disableAccessAll") oGuiObj = document;
+      else return false;
+   }
+      
+   bPrevStat = oGuiObj.disabled;
+   oGuiObj.disabled = fAccess;
+
+   var aGuiObj = oGuiObj.getElementsByTagName ("input");
+   for (var i = 0; i < aGuiObj.length; i++) aGuiObj[i].disabled = fAccess;
+
+   aGuiObj = oGuiObj.getElementsByTagName ("div");
+   for (var i = 0; i < aGuiObj.length; i++) aGuiObj[i].disabled = fAccess;
+
+   aGuiObj = oGuiObj.getElementsByTagName ("form");
+   for (var i = 0; i < aGuiObj.length; i++) aGuiObj[i].disabled = fAccess;
+   
+   aGuiObj = oGuiObj.getElementsByTagName ("select");
+   for (var i = 0; i < aGuiObj.length; i++) aGuiObj[i].disabled = fAccess;
+
+   aGuiObj = oGuiObj.getElementsByTagName ("span");
+   for (var i = 0; i < aGuiObj.length; i++) aGuiObj[i].disabled = fAccess;
+
+   aGuiObj = oGuiObj.getElementsByTagName ("acronym");
+   for (var i = 0; i < aGuiObj.length; i++) aGuiObj[i].disabled = fAccess;
+
+   aGuiObj = oGuiObj.getElementsByTagName ("b");
+   for (var i = 0; i < aGuiObj.length; i++) aGuiObj[i].disabled = fAccess;
+   
+   aGuiObj = oGuiObj.getElementsByTagName ("font");
+   for (var i = 0; i < aGuiObj.length; i++) aGuiObj[i].disabled = fAccess;
+
+   return bPrevStat;
+}
+
+
+// #####
+// ## Class::CSupport::disableAccessAll ()
+// ## return: none;
+function CSupport_disableAccessAll () { // return: none
+   document.body.scroll = "no";
+
+   this.disableAccess ("CSupport_disableAccessAll", true);
+}
+
+
+// #####
+// ## Class::CSupport::addEventHandler (oElement, eventName, func)
+// ## return: true || false;
+function CSupport_addEventHandler (oElement, eventName, func) { // return: true || false
+   return CSupportBase.getInstance().addEventHandler (oElement, eventName, func);
+}
+
+
+// #####
+// ## Class::CSupport::getElemPos ()
+// ## return: actual elem position in a document;
+function CSupport_getElemPos (oElem) { // return: actual elem position in a document
+   return CSupportBase.getInstance().getElemPos (oElem);
+}
+
+
+// #####
+// ## Class::CSupport::isElemVisible (topLayerDivID);
+// ## return: top layer visibility status;
+function CSupport_isElemVisible (topLayerDivID) { // return: top layer visibility status
+   return CSupportBase.getInstance().isElemVisible (topLayerDivID);
+}
+
+
+// #####
+// ## Class::CSupport::isEmpty (val)
+// ## return: true || false;
+function CSupport_isEmpty (val) {
+   return CSupportBase.getInstance().isEmpty (val);
+}
+
+
+// #####
+// ## Class::CSupport::pleaseWaitBox (fShow) // fShow - true || false;
+// ## return: none;
+function CSupport_pleaseWaitBox (fShow) { // return: none
+   return CSupportBase.getInstance().pleaseWaitBox (fShow);
+}
+
+
+// #####
+// ## Class::CSupport::toggleTopLayer (topLayerDivID, fShow) // fShow - true || false;
+// ## return: none;
+function CSupport_toggleTopLayer (topLayerDivID, fShow) { // return: none
+   return CSupportBase.getInstance().toggleTopLayer (topLayerDivID, fShow);
+}
+
+
+// #####
+// ## Class::CSupport::expandDiv (divId, expandHBy)
+// ## return: none;
+function CSupport_expandDiv (divId, expandHBy) { // return: none
+   return CSupportBase.getInstance().expandDiv (divId, expandHBy);
+}
+
+
+// #####
+// ## Class::CSupport::getUserId ()
+// ## return: userId;
+function CSupport_getUserId () {
+   return this.getNetworkObj().UserName;
+}
+
+
+// #####
+// ## Class::CSupport::getOsVersion ()
+// ## return: winOsVerStr || "";
+function CSupport_getOsVersion () {
+   // navigator.appVersion || navigator.platform || navigator.userAgent;
+   // var oUserAgent = navigator.userAgent.toLowerCase();
+   // var isWin = oUserAgent.indexOf('win') > 0;
+   // var isWinnt4 = (isWin && oUserAgent.indexOf('nt 4.0') > 0);
+
+   var oUserAgent = navigator.userAgent;
+   var isWin = navigator.userAgent.toLowerCase().indexOf('win') > 0;
+
+   if (!isWin) return "";
+
+   var winVer = oUserAgent.replace(/(.*)(Windows\s+\w+\s*\w*\.*\w*)(;*.*)/i, "$2");
+   winVer = winVer.replace (/\s+/g, " ");
+
+   return winVer;
+}
+
+
+// #####
+// ## Class::CSupport::getLocInfo (path)
+// ## return: .path .name .type .fullPath;
+function CSupport_getLocInfo (path) { // return: .path .name .type .fullPath
+   path = path.replace (/\\+/g, "\\");
+
+   var path_copy = path;
+   var aPath = path.split("\\");
+   var aExpandLoc = new Array ();
+   var type = "unknown";
+   var name = "";
+
+   for (var pElem in aPath) aExpandLoc[pElem] = this.getShellObj().ExpandEnvironmentStrings (aPath[pElem]);
+
+   var expandLoc = aExpandLoc.join ("\\");
+   if (this.getFsoObj().FileExists (expandLoc)) {
+      aPath.pop();
+      path = aPath.join ("\\");
+
+      name = path_copy.replace (path +"\\", "");
+      type = "file";
+   } else if (this.getFsoObj().FolderExists(expandLoc)) {
+      type = "folder";
+   }
+
+   return {
+      path:path,
+      name:name,
+      type:type,
+      fullPath:expandLoc
+   };
+}
+
+
+CSupport.prototype.getShellObj = CSupport_getShellObj;
+CSupport.prototype.getFsoObj = CSupport_getFsoObj;
+CSupport.prototype.getNetworkObj = CSupport_getNetworkObj;
+CSupport.prototype.getRequestObj = CSupport_getRequestObj;
+CSupport.prototype.readFile = CSupport_readFile;
+CSupport.prototype.writeToFile = CSupport_writeToFile;
+CSupport.prototype.deleteFile = CSupport_deleteFile;
+CSupport.prototype.disableAccess = CSupport_disableAccess;
+CSupport.prototype.disableAccessAll = CSupport_disableAccessAll;
+CSupport.prototype.addEventHandler = CSupport_addEventHandler;
+CSupport.prototype.getElemPos = CSupport_getElemPos;
+CSupport.prototype.isElemVisible = CSupport_isElemVisible;
+CSupport.prototype.isEmpty = CSupport_isEmpty;
+CSupport.prototype.pleaseWaitBox = CSupport_pleaseWaitBox;
+CSupport.prototype.toggleTopLayer = CSupport_toggleTopLayer;
+CSupport.prototype.expandDiv = CSupport_expandDiv;
+CSupport.prototype.getUserId = CSupport_getUserId;
+CSupport.prototype.getOsVersion = CSupport_getOsVersion;
+CSupport.prototype.getLocInfo = CSupport_getLocInfo;
+// ## /Class::CSupport
+// #####
+
+   </script>
+   <script type="text/javascript" >
+   // addEvent(window, "load", sortables_init); // TCPC: ###
+
+var SORT_COLUMN_INDEX;
+var TIMESTART;
+
+function sortables_init() {
+    // Find all tables with class sortable and make them sortable
+    if (!document.getElementsByTagName) return;
+    tbls = document.getElementsByTagName("table");
+    for (ti=0;ti<tbls.length;ti++) {
+        thisTbl = tbls[ti];
+        // if (((' '+thisTbl.className+' ').indexOf("sortable") != -1) && (thisTbl.id)) { // TCPC: ###
+        if (((' '+thisTbl.className+' ').indexOf("sortable") != -1)) {
+            //initTable(thisTbl.id);
+            ts_makeSortable(thisTbl);
+        }
+    }
+}
+
+function ts_makeSortable(table) {
+    if (table.rows && table.rows.length > 0) {
+        var firstRow = table.rows[0];
+    }
+    if (!firstRow) return;
+    
+    // We have a first row: assume it's the header, and make its contents clickable links
+    for (var i=0;i<firstRow.cells.length;i++) {
+        var cell = firstRow.cells[i];
+        var txt = ts_getInnerText(cell);
+
+        if (!cell.className.match(/\bsorttable_nosort\b/)) {  // TCPC: ***
+           cell.innerHTML = '<a href="#" class="sortheader" '+ 
+           'onclick="ts_resortTable(this, '+i+');return false;">' + 
+           txt+'<span class="sortarrow">&nbsp;&nbsp;&nbsp;</span></a>';
+        }
+    }
+}
+
+function ts_getInnerText(el) {
+	if (typeof el == "string") return el;
+	if (typeof el == "undefined") { return el };
+	if (el.innerText) return el.innerText;	//Not needed but it is faster
+	var str = "";
+	
+	var cs = el.childNodes;
+	var l = cs.length;
+	for (var i = 0; i < l; i++) {
+		switch (cs[i].nodeType) {
+			case 1: //ELEMENT_NODE
+				str += ts_getInnerText(cs[i]);
+				break;
+			case 3:	//TEXT_NODE
+				str += cs[i].nodeValue;
+				break;
+		}
+	}
+	return str;
+}
+
+function ts_resortTable(lnk,clid) {
+    TIMERSTART = (new Date()).getTime();
+    // get the span
+    var span;
+    for (var ci=0;ci<lnk.childNodes.length;ci++) {
+        if (lnk.childNodes[ci].tagName && lnk.childNodes[ci].tagName.toLowerCase() == 'span') span = lnk.childNodes[ci];
+    }
+    var spantext = ts_getInnerText(span);
+    var td = lnk.parentNode;
+    var column = clid || td.cellIndex;
+    var table = getParent(td,'TABLE');
+    
+    // Work out a type for the column
+    if (table.rows.length <= 1) return;
+    var itm = ts_getInnerText(table.rows[1].cells[column]);
+    sortfn = ts_sort_caseinsensitive;
+    if (itm.match(/^\d\d[\/-]\d\d[\/-]\d\d\d\d$/)) sortfn = ts_sort_date;
+    if (itm.match(/^\d\d[\/-]\d\d[\/-]\d\d$/)) sortfn = ts_sort_date;
+    if (itm.match(/^[�$]/)) sortfn = ts_sort_currency;
+    if (itm.match(/^[\d\.]+$/)) sortfn = ts_sort_numeric;
+    SORT_COLUMN_INDEX = column;
+    var firstRow = new Array();
+    var newRows = new Array();
+    for (i=0;i<table.rows[0].length;i++) { firstRow[i] = table.rows[0][i]; }
+    for (j=1;j<table.rows.length;j++) { newRows[j-1] = table.rows[j]; }
+
+    newRows.sort(sortfn);
+
+    if (span.getAttribute("sortdir") == 'down') {
+        ARROW = '&nbsp;&nbsp;&uarr;';
+        newRows.reverse();
+        span.setAttribute('sortdir','up');
+    } else {
+        ARROW = '&nbsp;&nbsp;&darr;';
+        span.setAttribute('sortdir','down');
+    }
+    
+    // We appendChild rows that already exist to the tbody, so it moves them rather than creating new ones
+    // don't do sortbottom rows
+    for (i=0;i<newRows.length;i++) { if (!newRows[i].className || (newRows[i].className && (newRows[i].className.indexOf('sortbottom') == -1))) table.tBodies[0].appendChild(newRows[i]);}
+    // do sortbottom rows only
+    for (i=0;i<newRows.length;i++) { if (newRows[i].className && (newRows[i].className.indexOf('sortbottom') != -1)) table.tBodies[0].appendChild(newRows[i]);}
+    
+    // Delete any other arrows there may be showing
+    var allspans = document.getElementsByTagName("span");
+    for (var ci=0;ci<allspans.length;ci++) {
+        if (allspans[ci].className == 'sortarrow') {
+            if (getParent(allspans[ci],"table") == getParent(lnk,"table")) { // in the same table as us?
+                allspans[ci].innerHTML = '&nbsp;&nbsp;&nbsp;';
+            }
+        }
+    }
+        
+    span.innerHTML = ARROW;
+    // alert("Time taken: " + ( (new Date()).getTime() - TIMERSTART ) + "ms"); // TCPC: ###
+}
+
+function getParent(el, pTagName) {
+	if (el == null) return null;
+	else if (el.nodeType == 1 && el.tagName.toLowerCase() == pTagName.toLowerCase())	// Gecko bug, supposed to be uppercase
+		return el;
+	else
+		return getParent(el.parentNode, pTagName);
+}
+function ts_sort_date(a,b) {
+    // y2k notes: two digit years less than 50 are treated as 20XX, greater than 50 are treated as 19XX
+    aa = ts_getInnerText(a.cells[SORT_COLUMN_INDEX]);
+    bb = ts_getInnerText(b.cells[SORT_COLUMN_INDEX]);
+    if (aa.length == 10) {
+        dt1 = aa.substr(6,4)+aa.substr(3,2)+aa.substr(0,2);
+    } else {
+        yr = aa.substr(6,2);
+        if (parseInt(yr) < 50) { yr = '20'+yr; } else { yr = '19'+yr; }
+        dt1 = yr+aa.substr(3,2)+aa.substr(0,2);
+    }
+    if (bb.length == 10) {
+        dt2 = bb.substr(6,4)+bb.substr(3,2)+bb.substr(0,2);
+    } else {
+        yr = bb.substr(6,2);
+        if (parseInt(yr) < 50) { yr = '20'+yr; } else { yr = '19'+yr; }
+        dt2 = yr+bb.substr(3,2)+bb.substr(0,2);
+    }
+    if (dt1==dt2) return 0;
+    if (dt1<dt2) return -1;
+    return 1;
+}
+
+function ts_sort_currency(a,b) { 
+    aa = ts_getInnerText(a.cells[SORT_COLUMN_INDEX]).replace(/[^0-9.]/g,'');
+    bb = ts_getInnerText(b.cells[SORT_COLUMN_INDEX]).replace(/[^0-9.]/g,'');
+    return parseFloat(aa) - parseFloat(bb);
+}
+
+function ts_sort_numeric(a,b) { 
+    aa = parseFloat(ts_getInnerText(a.cells[SORT_COLUMN_INDEX]));
+    if (isNaN(aa)) aa = 0;
+    bb = parseFloat(ts_getInnerText(b.cells[SORT_COLUMN_INDEX])); 
+    if (isNaN(bb)) bb = 0;
+    return aa-bb;
+}
+
+function ts_sort_caseinsensitive(a,b) {
+    aa = ts_getInnerText(a.cells[SORT_COLUMN_INDEX]).toLowerCase();
+    bb = ts_getInnerText(b.cells[SORT_COLUMN_INDEX]).toLowerCase();
+    if (aa==bb) return 0;
+    if (aa<bb) return -1;
+    return 1;
+}
+
+function ts_sort_default(a,b) {
+    aa = ts_getInnerText(a.cells[SORT_COLUMN_INDEX]);
+    bb = ts_getInnerText(b.cells[SORT_COLUMN_INDEX]);
+    if (aa==bb) return 0;
+    if (aa<bb) return -1;
+    return 1;
+}
+
+
+function addEvent(elm, evType, fn, useCapture)
+// addEvent and removeEvent
+// cross-browser event handling for IE5+,  NS6 and Mozilla
+// By Scott Andrew
+{
+  if (elm.addEventListener){
+    elm.addEventListener(evType, fn, useCapture);
+    return true;
+  } else if (elm.attachEvent){
+    var r = elm.attachEvent("on"+evType, fn);
+    return r;
+  } else {
+    alert("Handler could not be removed");
+  }
+} 
+   </script>
+   <script type="text/javascript" >
+
+var cDirName = "Scheduler";
+var cCmdFilesLoc = "%ALLUSERSPROFILE%\\"+ cDirName;
+var cOsVer = "";
+
+var sched_aJobInfoCurrList = new Array ();
+
+CSupport.getInstance().addEventHandler (window, 'load', guiInit);
+
+// ##### create user options
+// ## guiInit ()
+// ## return: none;
+function guiInit () { // return: none
+   var oGuiObj = null;
+   var i = undefined;
+   
+   var oSupport = CSupport.getInstance ();
+   oSupport.pleaseWaitBox (false);
+
+   var aWinVer = oSupport.getOsVersion().split (" ");
+   cOsVer = aWinVer[2].split (oSupport.m_newLineChar);
+
+   if (cOsVer > 5.1) document.getElementById ("inptCbShowSysJobs").disabled = false;
+   else document.getElementById ("inptCbShowSysJobs").disabled = true;   
+
+   oGuiObj = document.getElementById ("frmHourToRunOpts");
+   oGuiObj.setOptsOnce = "true";
+   for (i = 0; i < 24; i++) {
+      var hour = i < 10 ? "0"+ i : i;
+
+      oGuiObj.options[oGuiObj.options.length] = new Option(hour, hour, false, false);
+   }
+
+   oGuiObj = document.getElementById ("frmMinToRunOpts");
+   oGuiObj.setOptsOnce = "true";
+   for (i = 0; i < 60; i++) {
+      var hour = i < 10 ? "0"+ i : i;
+
+      oGuiObj.options[oGuiObj.options.length] = new Option(hour, hour, false, false);
+   }
+
+   var createCmdFilesLoc = "CMD /C MKDIR \""+ cCmdFilesLoc +"\"";
+   oSupport.getShellObj().Run (createCmdFilesLoc, 0, true);
+
+   updateScheduleOpts ();
+}
+
+
+// #####
+// ## updateScheduleOpts ()
+// ## return: none;
+function updateScheduleOpts () { // return: none
+   var oSupport = CSupport.getInstance();
+   var jobSchedule = "<table cellpadding='5' cellspacing='0' border='0' class='sortable'>";
+   jobSchedule += "<thead><tr><th class='sorttable_nosort'>&nbsp;remove&nbsp;</th><th>&nbsp;Job name&nbsp;</th><th>&nbsp;Start time&nbsp;</th><th>&nbsp;Day&nbsp;</th><th>&nbsp;Active&nbsp;</th><th>&nbsp;Command&nbsp;</th></tr></thead><tbody>";
+
+   oSupport.pleaseWaitBox (true);
+
+   try {
+      document.getElementById("divOsVerStr").innerHTML = oSupport.getOsVersion();
+
+      sched_aJobInfoCurrList = getJobList ();
+      for (var jobIndx in sched_aJobInfoCurrList) {
+         jobSchedule += "<tr><td align='center'><input type='checkbox' onClick='deleteScheduledJob(this, \""+ jobIndx +"\");'/></td>"
+            +"<td align='center'>"+ sched_aJobInfoCurrList[jobIndx].jobId +"</td>"
+            +"<td align='center'>"+ sched_aJobInfoCurrList[jobIndx].jobRunHr +":"+ sched_aJobInfoCurrList[jobIndx].jobRunMin +"</td>"
+            +"<td align='center'>"+ sched_aJobInfoCurrList[jobIndx].jobDays +"</td>"
+            +"<td align='center'>"+ sched_aJobInfoCurrList[jobIndx].jobActive +"</td>"
+            +"<td>"+ sched_aJobInfoCurrList[jobIndx].jobCmd +"</td></tr>";
+      }
+
+      jobSchedule += "</tbody></table>";
+
+      document.getElementById("divJobsScheduleOpts").innerHTML = jobSchedule;
+   } catch (exp) {
+      alert ("Failed to populate list of scheduled job:\n\n" + exp.description);	
+   }
+
+   sortables_init ();
+
+   oSupport.pleaseWaitBox (false);
+}
+
+
+// #####
+// ## getJobList ()
+// ## return: array of JobInfo structures;
+// ##
+// ## oJobInfo = {
+// ##    jobId:"",
+// ##    jobDays:"",
+// ##    jobRunHr:"",
+// ##    jobRunMin:"",
+// ##    jobActive:"",
+// ##    jobCmd:""
+// ## };
+function getJobList () { // return: array of JobInfo structures
+   var oSupport = CSupport.getInstance();
+   var userId = oSupport.getUserId();
+   var aJobInfo = new Array ();
+   var jobScheduleOutFileLoc = "%TMP%\\jobsSchedule_"+ userId +".out";
+   var aAtCmdColumnParser = new Array ();
+   var isColumnHeadersParsed = false;
+   var jobScheduleCmd, oArrResponseText;
+
+   if (cOsVer > 5.1) {
+      // jobScheduleCmd = "CMD /C SCHTASKS.EXE /QUERY /NH | FINDSTR /V /I /C:\"Folder:\" /C:\"INFO:\" | FIND \":\""; // ??? XML format provides less info & WinXP doesn't support it
+      jobScheduleCmd = "CMD /C SCHTASKS.EXE /QUERY /FO:CSV /V";
+   } else {
+      jobScheduleCmd = "CMD /C AT | FIND /I \":\"";
+      
+      oSupport.getShellObj().Run ("CMD /C AT | FIND /I \"Status\" > \""+ jobScheduleOutFileLoc +"\"", 0, true);
+      oArrResponseText = oSupport.readFile (jobScheduleOutFileLoc, true).split (oSupport.m_newLineChar);
+      aAtCmdColumnParser["status"] = oArrResponseText[0].indexOf ("Status");
+      aAtCmdColumnParser["id"] = oArrResponseText[0].indexOf ("ID");
+      aAtCmdColumnParser["day"] = oArrResponseText[0].indexOf ("Day");
+      aAtCmdColumnParser["time"] = oArrResponseText[0].indexOf ("Time");
+      aAtCmdColumnParser["cmd"] = oArrResponseText[0].indexOf ("Command Line");
+   }
+
+   jobScheduleCmd += " > \""+ jobScheduleOutFileLoc +"\"";
+
+   oSupport.getShellObj().Run (jobScheduleCmd, 0, true);
+   
+   oArrResponseText = oSupport.readFile (jobScheduleOutFileLoc, true).split (oSupport.m_newLineChar);
+   for (var jobLineIndx in oArrResponseText) {
+
+      if (oArrResponseText[jobLineIndx].length > 0) {
+         var jobLine = oArrResponseText[jobLineIndx];
+
+         var aJobTime;
+         var oJobInfo = {
+            jobId:"",
+            jobDays:"",
+            jobRunHr:"",
+            jobRunMin:"",
+            jobActive:"",
+            jobCmd:""
+         };
+
+         if (cOsVer > 5.1) {
+            var aJobLine = jobLine.split ("\",\"");
+            
+            if (!isColumnHeadersParsed) { // parsing column headers
+           
+               // WinXP
+               //"HostName","TaskName","Next Run Time","Status","Last Run Time","Last Result","Creator","Schedule","Task To Run","Start In","Comment","Scheduled Task State","Scheduled Type","Start Time","Start Date","End Date","Days","Months","Run As User","Delete Task If Not Rescheduled","Stop Task If Runs X Hours and X Mins","Repeat: Every","Repeat: Until: Time","Repeat: Until: Duration","Repeat: Stop If Still Running","Idle Time","Power Management"
+               //
+               // Vista
+               // "HostName","TaskName","Next Run Time","Status","Logon Mode","Last Run Time","Last Result","Author","Task To Run","Start In","Comment","Scheduled Task State","Idle Time","Power Management","Run As User","Delete Task If Not Rescheduled","Stop Task If Runs X Hours and X Mins","Schedule","Schedule Type","Start Time","Start Date","End Date","Days","Months","Repeat: Every","Repeat: Until: Time","Repeat: Until: Duration","Repeat: Stop If Still Running"
+
+               for (var headerIndx in aJobLine) {
+                  if (aJobLine[headerIndx].toLowerCase() == "taskname") {
+                     aAtCmdColumnParser["id"] = headerIndx;
+                  } else if (aJobLine[headerIndx].toLowerCase() == "status") {
+                     aAtCmdColumnParser["status"] = headerIndx;
+                  } else if (aJobLine[headerIndx].toLowerCase() == "task to run") {
+                     aAtCmdColumnParser["cmd"] = headerIndx;
+                  } else if (aJobLine[headerIndx].toLowerCase() == "start time") {
+                     aAtCmdColumnParser["time"] = headerIndx;
+                  } else if (aJobLine[headerIndx].toLowerCase() == "schedule type") { // !!! "scheduled type" - WinXP || "schedule type" - Vista
+                     aAtCmdColumnParser["type"] = headerIndx;
+                  } else if (aJobLine[headerIndx].toLowerCase() == "days") {
+                     aAtCmdColumnParser["days"] = headerIndx;
+                  } else if (aJobLine[headerIndx].toLowerCase() == "months") {
+                     aAtCmdColumnParser["months"] = headerIndx;
+                  }else if (aJobLine[headerIndx].toLowerCase() == "author") { // !!! "creator" - WinXP || "author" - Vista
+                     aAtCmdColumnParser["author"] = headerIndx;
+                  }
+               }
+
+               isColumnHeadersParsed = true;
+
+               continue;
+            } else {
+               var jobUserId = aJobLine[aAtCmdColumnParser["author"]];
+
+               if (oSupport.isEmpty (jobUserId) || jobUserId.toLowerCase() == "author") continue;
+
+               // !!! filtering sys jobs
+               if (!document.getElementById ("inptCbShowSysJobs").checked && (jobUserId.toLowerCase() == "n/a" || jobUserId.toLowerCase().indexOf ("microsoft") != -1)) continue;
+
+               oJobInfo.jobId = aJobLine[aAtCmdColumnParser["id"]];
+               oJobInfo.jobId = oJobInfo.jobId.replace (/^\\/, "");
+
+               aJobTime = timeTo24 (aJobLine[aAtCmdColumnParser["time"]]);
+
+               oJobInfo.jobRunHr = aJobTime.hr;
+               oJobInfo.jobRunMin = aJobTime.min;
+
+               oJobInfo.jobDays = "";
+               if (!oSupport.isEmpty (aJobLine[aAtCmdColumnParser["type"]]) && aJobLine[aAtCmdColumnParser["type"]].toLowerCase() != "n/a") oJobInfo.jobDays += " "+ aJobLine[aAtCmdColumnParser["type"]];               
+               if (!oSupport.isEmpty (aJobLine[aAtCmdColumnParser["days"]]) && aJobLine[aAtCmdColumnParser["days"]].toLowerCase() != "n/a") oJobInfo.jobDays += " "+ aJobLine[aAtCmdColumnParser["days"]];
+               if (!oSupport.isEmpty (aJobLine[aAtCmdColumnParser["months"]]) && aJobLine[aAtCmdColumnParser["months"]].toLowerCase() != "n/a") oJobInfo.jobDays += " "+ aJobLine[aAtCmdColumnParser["months"]];
+
+               oJobInfo.jobActive = aJobLine[aAtCmdColumnParser["status"]];
+               oJobInfo.jobCmd = aJobLine[aAtCmdColumnParser["cmd"]];
+            }
+/* // ??? XML format provides less info & WinXP doesn't support it
+            var aJobLine = jobLine.split (" ");
+            var jobXmlCmd = "CMD /C SCHTASKS.EXE /Query /TN "+ aJobLine[0] +" /xml | FIND /V \"xml version\" > \""+ jobScheduleOutFileLoc +"\"";
+
+            oSupport.getShellObj().Run (jobXmlCmd, 0, true);
+
+            var oXmlJob = new ActiveXObject("Microsoft.XMLDOM");
+            oXmlJob.load(oSupport.getShellObj().ExpandEnvironmentStrings(jobScheduleOutFileLoc));
+
+            if (oXmlJob.parseError.errorCode) {
+//               var dlgErrMsg = "Error occur while loading job info:\n\n";
+//               dlgErrMsg += " Line: "+ oXmlJob.parseError.line +"\n"; 
+//               dlgErrMsg += " LinePos: "+ oXmlJob.parseError.linePos +"\n"; 
+//               dlgErrMsg += " SrcText: "+ oXmlJob.parseError.srcText +"\n"; 
+//               dlgErrMsg += " ErrorCode: "+ oXmlJob.parseError.errorCode +"\n"; 
+//               dlgErrMsg += " ErrorDescription: "+ oXmlJob.parseError.reason +"\n";
+//
+//               alert (dlgErrMsg);
+               continue;
+            } else {
+               var jobUserId = oXmlJob.selectSingleNode ("//Task/RegistrationInfo/Author");
+
+               if (oSupport.isEmpty (jobUserId)) continue;
+               if (jobUserId.text != userId) continue
+
+               oJobInfo.jobId = aJobLine[0];
+               aJobTime = oXmlJob.selectSingleNode ("//Task/Triggers/CalendarTrigger/StartBoundary").text.replace(/^.*T/,"").split(":");
+
+               oJobInfo.jobRunHr = aJobTime[0];
+               oJobInfo.jobRunMin = aJobTime[1];
+
+               oJobInfo.jobActive = oXmlJob.selectSingleNode ("//Task/Settings/Enabled").text;
+               oJobInfo.jobCmd = oXmlJob.selectSingleNode ("//Task/Actions/Exec/Command").text;
+               // ### oXmlJob.selectSingleNode ("//Task/Triggers/CalendarTrigger/Enabled").text;
+            }
+*/
+
+         } else {
+            // Status ID   Day                     Time          Command Line
+            // -------------------------------------------------------------------------------            
+            //         1   Each M T W Th F S Su    8:00 PM       "C:\Users\All Users\iCanSyncEZ\iCanSyncEZ_icanfix.bat"
+
+            oJobInfo.jobActive = jobLine.slice(aAtCmdColumnParser["status"], aAtCmdColumnParser["id"]);
+            oJobInfo.jobId = jobLine.slice(aAtCmdColumnParser["id"], aAtCmdColumnParser["day"]);
+            oJobInfo.jobDays = jobLine.slice(aAtCmdColumnParser["day"], aAtCmdColumnParser["time"]);
+
+            var jobTime = jobLine.slice(aAtCmdColumnParser["time"], aAtCmdColumnParser["cmd"]);
+            jobTime = jobTime.replace (/\s+/g, " ");
+
+            aJobTime = timeTo24 (jobTime);
+
+            oJobInfo.jobRunHr = aJobTime.hr;
+            oJobInfo.jobRunMin = aJobTime.min;
+
+            oJobInfo.jobCmd = jobLine.slice(aAtCmdColumnParser["cmd"]);
+         }
+
+         aJobInfo.push (oJobInfo);
+      }
+   }
+
+   return aJobInfo;
+}
+
+
+// #####
+// ## deleteScheduledJob (oElem, jobIndx)
+// ## return: 0 - ok || 1;
+function deleteScheduledJob (oElem, jobIndx) { // return: 0 - ok || 1
+   var dlgErrMsg = "Are you sure you want to delete selected job?";
+   var oSupport = CSupport.getInstance();
+   var jobId = sched_aJobInfoCurrList[jobIndx].jobId;
+   var jobCmdFileLoc = sched_aJobInfoCurrList[jobIndx].jobCmd;
+
+   if (!confirm (dlgErrMsg)) {
+      oElem.checked = false;
+      return 1;
+   }
+
+   var cmdDelJob = "AT "+ jobId +" /delete /yes";
+   if (cOsVer > 5.1) cmdDelJob = "SCHTASKS /Delete /TN \""+ jobId +"\" /F";
+
+   oSupport.getShellObj().Run (cmdDelJob, 0, true);
+
+   var jobCmdFilePath = oSupport.getShellObj().ExpandEnvironmentStrings (cCmdFilesLoc) +"\\";
+   if (jobCmdFileLoc.indexOf (jobCmdFilePath) != -1) {
+      jobCmdFileLoc = jobCmdFileLoc.replace ("\"", "");
+      oSupport.deleteFile (jobCmdFileLoc);
+   }
+   
+   updateScheduleOpts ();
+
+   return 0;
+}
+
+
+// #####
+// ## scheduleNewJob ()
+// ## return: 0 - ok || 1;
+function scheduleNewJob () { // return: 0 - ok || 1
+   var appLoc = document.getElementById ("inptAppLoc").value;
+   var appParms = document.getElementById ("inptAppParms").value;
+   var hour = document.getElementById("frmHourToRunOpts").value;
+   var min = document.getElementById("frmMinToRunOpts").value;
+   var oSupport = CSupport.getInstance();
+   var cmdCreateNewJob = "";
+   var appName;
+
+   if (appLoc == "" && appParms == "" || hour == "") { // !!! do not add same job
+      alert ("Please provide required information.");
+
+      return 1;
+   }
+
+   if (!confirm ("Please put files/paths with spaces in double quotes. Do you want to continue?")) return 1;
+
+   appName = oSupport.getLocInfo (appLoc);
+   appName = appName.name;
+
+   var aJobInfo = getJobList ();
+   for (var jobIndx in aJobInfo) {
+      if (parseInt (hour, 10) == aJobInfo[jobIndx].jobRunHr && parseInt (min, 10) == aJobInfo[jobIndx].jobRunMin) {
+         alert ("Job alredy exists for the same time.");
+
+         updateScheduleOpts ();
+
+         return 0;
+      }
+   }
+
+   if (cOsVer > 5.1) {
+      var jobId = appName +"_"+ oSupport.getUserId() + hour + min;
+
+      var pswd = prompt("Please provide user account password:","");
+
+      cmdCreateNewJob = "CMD /C SCHTASKS.EXE /CREATE /SC WEEKLY /D "
+         + (document.getElementById ("inptCbMon").checked ? "MON," : "")
+         + (document.getElementById ("inptCbTue").checked ? "TUE," : "")
+         + (document.getElementById ("inptCbWed").checked ? "WED," : "")
+         + (document.getElementById ("inptCbThu").checked ? "THU," : "")
+         + (document.getElementById ("inptCbFri").checked ? "FRI," : "")
+         + (document.getElementById ("inptCbSat").checked ? "SAT," : "")
+         + (document.getElementById ("inptCbSun").checked ? "SUN" : "");
+
+      cmdCreateNewJob = cmdCreateNewJob.replace (/,$/, "");
+
+      cmdCreateNewJob += " /IT /TN \""+ jobId +"\" /TR \""+ appLoc +" "+ appParms +"\" /ST "+ hour +":"+ min +":00"
+         +" /RU "+ oSupport.getUserId() +" /RP "+ pswd;
+   } else {
+      var jobCmdFileLoc = oSupport.getShellObj().ExpandEnvironmentStrings (cCmdFilesLoc) +"\\"+ appName +"_"+ oSupport.getUserId()  +"_"+ hour +"_"+ min +".bat";
+      var jobCmdFileContent = "@ECHO OFF" + oSupport.m_newLineChar
+         +"TITLE "+ appName +" scheduled run for user: "+ oSupport.getUserId() + oSupport.m_newLineChar
+         +"SET APPDATA="+ oSupport.getShellObj().ExpandEnvironmentStrings ("%APPDATA%") + oSupport.m_newLineChar
+         +"SET USERPROFILE="+ oSupport.getShellObj().ExpandEnvironmentStrings ("%USERPROFILE%") + oSupport.m_newLineChar
+         +"SET USERNAME="+ oSupport.getUserId() + oSupport.m_newLineChar
+         + appLoc +" "+ appParms + oSupport.m_newLineChar
+         +"EXIT"+ oSupport.m_newLineChar;
+      oSupport.writeToFile (jobCmdFileLoc, jobCmdFileContent);
+
+      cmdCreateNewJob = "CMD /C AT "+ hour +":"+ min +" /interactive /every:"
+         + (document.getElementById ("inptCbMon").checked ? "M," : "")
+         + (document.getElementById ("inptCbTue").checked ? "T," : "")
+         + (document.getElementById ("inptCbWed").checked ? "W," : "")
+         + (document.getElementById ("inptCbThu").checked ? "Th," : "")
+         + (document.getElementById ("inptCbFri").checked ? "F," : "")
+         + (document.getElementById ("inptCbSat").checked ? "S," : "")
+         + (document.getElementById ("inptCbSun").checked ? "Su" : "")
+         +" \""+ jobCmdFileLoc +"\"";
+   }
+
+   oSupport.getShellObj().Run (cmdCreateNewJob, 0, true);
+
+   updateScheduleOpts ();
+
+   return 0;
+}
+
+
+// #####
+// ## timeTo24 (timeStr)
+// ## return: .hr, .min;
+function timeTo24 (timeStr) { // return: .hr, .min
+   var aTimeStr = timeStr.split(" ");
+   aTimeStr = aTimeStr[0].split(":");
+
+   var convHr = "";
+   var convMin = "";
+
+   if (aTimeStr.length > 1) {
+      convHr = aTimeStr[0];
+      convMin = aTimeStr[1];
+
+      var aMatch = timeStr.match(/am|pm/i);
+    
+      if (aMatch != null) {
+         if (aMatch[0].match(/pm/i) != null && convHr != 12) convHr = parseInt (convHr, 10) + 12;
+         else if (aMatch[0].match(/am/i) != null && convHr == 12) convHr = "00";
+      }
+   }
+
+   return {
+      hr:convHr,
+      min:convMin
+   };
+}
+   </script>
+ </head>
+
+ <body>
+   <p class='hdr1_b13' align='center'>Scheduler&nbsp;<span name='divOsVerStr' id='divOsVerStr'></span></p>
+
+   <br/>
+   <p class='topLayerGrayMargin'>
+      <b>List of existing jobs:</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style='color:#C0C0C0'>Show system jobs</span><input type='checkbox' id='inptCbShowSysJobs' onClick='updateScheduleOpts()' disabled='true' />&nbsp;&nbsp;&nbsp;<a href='javascript:CSupport.getInstance().expandDiv("divJobsScheduleOpts", 200);'><u><b>Expand</b></u></a>&nbsp;&nbsp;&nbsp;<a href='javascript:CSupport.getInstance().expandDiv("divJobsScheduleOpts", -200);'><u><b>Shrink</b></u></a>
+      <div id='divJobsScheduleOpts' style='overflow:auto; height: 200px;'></div>
+   </p>
+
+   <form class='topLayerGrayMargin'>
+      <b>Select application:</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type='file' id='inptAppLoc' size='100'/>&nbsp;&nbsp;<font color='red'>*</font>
+      <br/>
+      <b>Type parms or cmd:</b>&nbsp;&nbsp;<input type="text" id='inptAppParms' size='100'/>
+   </form>
+
+  <p>
+     <b>Day(s):</b>&nbsp;&nbsp;&nbsp;
+     Mon&nbsp;<input type="checkbox" id="inptCbMon" checked='true'/>&nbsp;&nbsp;
+     Tue&nbsp;<input type="checkbox" id="inptCbTue" checked='true'/>&nbsp;&nbsp;
+     Wed&nbsp;<input type="checkbox" id="inptCbWed" checked='true'/>&nbsp;&nbsp;
+     Thu&nbsp;<input type="checkbox" id="inptCbThu" checked='true'/>&nbsp;&nbsp;
+     Fri&nbsp;<input type="checkbox" id="inptCbFri" checked='true'/>&nbsp;&nbsp;
+     Sat&nbsp;<input type="checkbox" id="inptCbSat" checked='true'/>&nbsp;&nbsp;
+     Sun&nbsp;<input type="checkbox" id="inptCbSun" checked='true'/>&nbsp;&nbsp;
+  </p>
+
+  <p class='topLayerGrayMargin' id='frmTimeToRun'>
+      <b>Start time:</b>&nbsp;&nbsp;
+      <select id='frmHourToRunOpts'>
+         <option value=''></option>
+      </select>
+      <select id='frmMinToRunOpts'>
+      </select>
+      <font color='red'>*</font>
+   </p>
+
+   <p align='center'>
+      <input type='button' value='Schedule job' onClick='scheduleNewJob();' />
+   </p>
+
+   <table width='100%'><tr bgcolor='#4682B4'><td height='22'>&nbsp;&nbsp;Version: 1.0.18 [11 Nov 2010 12:39]</td></tr></table>
+
+ </body>
+</html>

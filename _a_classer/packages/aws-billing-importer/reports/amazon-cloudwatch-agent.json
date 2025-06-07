@@ -1,0 +1,92 @@
+{
+  "agent": {
+    "debug": false,
+    "logfile": "/var/log/cloudwatch.log",
+    "metrics_collection_interval": 60
+  },
+  "logs": {
+    "log_stream_name": "{local_hostname}",
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/cloud-init.log",
+            "log_group_name": "var-log-cloudinit",
+            "timestamp_format": "%Y-%m-%d %H:%M:%S,%f"
+          },
+          {
+            "file_path": "/var/log/dmesg",
+            "log_group_name": "var-log-dmesg",
+            "timestamp_format": "%b %d %H:%M:%S"
+          },
+          {
+            "file_path": "/var/log/messages",
+            "log_group_name": "var-log-messages",
+            "timestamp_format": "%b %d %H:%M:%S"
+          },
+          {
+            "file_path": "/var/log/secure",
+            "log_group_name": "var-log-secure",
+            "timestamp_format": "%b %d %H:%M:%S"
+          },
+          {
+            "file_path": "/var/log/yum.log",
+            "log_group_name": "var-log-yum",
+            "timestamp_format": "%b %d %H:%M:%S"
+          },
+          {
+            "file_path": "/var/log/cloud-init-output.log",
+            "log_group_name": "var-log-cloud-init-output",
+            "timestamp_format": "%b %d %H:%M:%S"
+          },
+          {
+            "file_path": "/var/log/ticksmith/gtv-etl-cluster-manager.out",
+            "log_group_name": "etl-cluster-manager-out",
+            "timestamp_format": "%Y-%m-%d %H:%M:%S,%f"
+          },
+          {
+            "file_path": "/var/log/ticksmith/gtv-etl-cluster-manager/gtv-etl-cluster-manager.log",
+            "log_group_name": "etl-cluster-manager",
+            "timestamp_format": "%Y-%m-%d %H:%M:%S,%f"
+          }
+        ]
+      }
+    }
+  },
+  "metrics": {
+    "aggregation_dimensions": [
+      [
+        "AutoScalingGroupName"
+      ],
+      [
+        "InstanceId",
+        "InstanceType"
+      ],
+      []
+    ],
+    "append_dimensions": {
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "disk": {
+        "measurement": [
+          "disk_free",
+          "disk_used_percent"
+        ]
+      },
+      "mem": {
+        "measurement": [
+          "mem_used_percent"
+        ]
+      },
+      "statsd": {},
+      "swap": {
+        "measurement": [
+          "swap_used_percent"
+        ]
+      }
+    },
+    "namespace": "CWAgent"
+  }
+}
