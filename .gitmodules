@@ -1,0 +1,5 @@
+
+[submodule "packages/win-setup-tool"]
+	path = packages/win-setup-tool
+	url = git@github.com:JeanMGirard/win-setup-tool.git
+  
