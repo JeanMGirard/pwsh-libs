@@ -1,2 +1,5 @@
 
 samples/azure-files-samples/
+.env*
+!.env.example
+

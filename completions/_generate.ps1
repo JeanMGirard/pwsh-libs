@@ -6,7 +6,7 @@ $ALL_COMPLETIONS_FILE = "$PSScriptRoot/_all.ps1"
 foreach ($cli in @("kubectl", "docker", "helm", "flux", "podman", "mongocli", "atlas")){
   Write-Host "Generation Completion for $cli"
 
-  if (Get-Command $cli){
+  if (Get-Command $cli -ErrorAction SilentlyContinue){
     Invoke-Expression -Command "$cli completion powershell > (Join-Path -Path `"$PSScriptRoot`" -ChildPath '${cli}.ps1')" `
       -ErrorAction SilentlyContinue | Out-Null
     if ($err){ Write-Error "Error generation completion for $cli" }
