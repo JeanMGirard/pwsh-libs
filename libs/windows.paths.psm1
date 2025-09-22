@@ -1,6 +1,6 @@
 
 
-function Run-Elevated ($scriptblock)
+function Invoke-Elevated ($scriptblock)
 {
   # TODO: make -NoExit a parameter
   # TODO: just open PS (no -Command parameter) if $scriptblock -eq ''
@@ -14,7 +14,7 @@ function Confirm-AdminPrivileges {
 }
 
 
-function Clean-SystemPaths {
+function Clear-SystemPaths {
 
   process {
     $extraPaths = ''
@@ -135,10 +135,10 @@ function Search-SystemPath {
 
 
 
-function Test-CommandAvailable {
-  param (
-      [Parameter(Mandatory = $True, Position = 0)]
-      [String] $Command
-  )
-  return [Boolean](Get-Command $Command -ErrorAction Ignore)
-}
+
+Export-ModuleMember -Function Invoke-Elevated
+Export-ModuleMember -Function Confirm-AdminPrivileges
+Export-ModuleMember -Function Clear-SystemPaths
+Export-ModuleMember -Function Add-SystemPath
+Export-ModuleMember -Function Remove-SystemPath
+Export-ModuleMember -Function Search-SystemPath

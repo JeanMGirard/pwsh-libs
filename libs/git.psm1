@@ -2,7 +2,9 @@
 
 
 
-
+function Get-GitDefaultBranch {
+    return git remote show origin | Select-String 'HEAD branch' | ForEach-Object { $_.ToString().Split(':')[1].Trim() }
+}
 function Invoke-ForEachRepo{
   $startDirectory = Get-Location
   $cmd = ""
@@ -30,11 +32,32 @@ function Invoke-ForEachRepo{
     }
   }
 }
+function Reset-GitBranch {
+    param (
+        [string]$BranchName
+    )
+    if ($(git status --porcelain) -ne "") {
+        Write-Host "You have uncommitted changes. Please commit or stash them before running this script."
+        exit 1
+        # git stash --include-untracked
+    }
 
+    git checkout $(Get-GitDefaultBranch)
+    git pull
+    if (git rev-parse -q --verify $BranchName) {
+        Write-Host "Branch $BranchName exists. Deleting it."
+        git branch -D $BranchName
+    }
+    git checkout -b $BranchName
+}
 
 
 Set-Alias -Name "git-recursive" -Value Invoke-ForEachRepo
+Set-Alias -Name "git-main"      -Value Get-GitDefaultBranch
 
 
+Export-ModuleMember -Function Get-*
 Export-ModuleMember -Function Invoke-*
-Export-ModuleMember -Alias git-recursive
+Export-ModuleMember -Function Reset-*
+
+Export-ModuleMember -Alias git-*
