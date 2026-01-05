@@ -72,7 +72,7 @@ function Use-1PasswordEnvFile {
         }
     }
 
-    get-content $op_dist | Where-Object { $_ -like '*=*' -and $_ -notlike "*#*=*" } | ForEach-Object {
+    get-content $EnvFile | Where-Object { $_ -like '*=*' -and $_ -notlike "*#*=*" } | ForEach-Object {
       $name, $value = $_.Trim(" ").split('=')
       set-content env:\$name $value.Trim('"')
     }
