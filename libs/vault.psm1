@@ -132,7 +132,7 @@ function Remove-VaultSecret {
   )
   
   begin {
-    Assert-VaultConnected
+    Assert-VaultConnected | Out-Null
   }
   process {
     if ($Prefix){ $Name="$Prefix/$Name".Replace("//", "/"); }
@@ -177,7 +177,7 @@ function Copy-VaultSecret {
   )
   
   begin {
-    Assert-VaultConnected
+    Assert-VaultConnected | Out-Null
   }
   process {
     
@@ -195,7 +195,7 @@ function Copy-VaultSecret {
     
     foreach ($CopyTo in $Dest) {
       if($Prefix){ $CopyTo="$Prefix/$CopyTo" }
-      if ($Force -or (-not $(Test-VaultSecretExists $CopyTo))) {
+      if ($Force -or (-not (Test-VaultSecretExists $CopyTo))) {
         vault kv put -mount="secret" -format="json" -field="data" $CopyTo ${dataParams} | Out-Null
       }
     }
@@ -231,7 +231,7 @@ function Test-VaultSecretExists {
   )
   
   begin {
-    Assert-VaultConnected
+    Assert-VaultConnected | Out-Null
   }
   process {
     if ($Prefix){ $Name="$Prefix/$Name".Replace("//", "/"); }
@@ -271,7 +271,7 @@ function Find-VaultSecrets {
   )
   
   begin {
-    Assert-VaultConnected
+    Assert-VaultConnected | Out-Null
   }
   process {
     try {
@@ -348,7 +348,7 @@ function Merge-VaultSecrets {
   )
   
   begin {
-    Assert-VaultConnected
+    Assert-VaultConnected | Out-Null
   }
   process {
     if ($Prefix){ 
