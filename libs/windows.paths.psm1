@@ -1,28 +1,43 @@
 
 
-function Invoke-Elevated ($scriptblock)
-{
-  # TODO: make -NoExit a parameter
-  # TODO: just open PS (no -Command parameter) if $scriptblock -eq ''
-  $sh = new-object -com 'Shell.Application'
-  $sh.ShellExecute('powershell', "-NoExit -Command $scriptblock", '', 'runas')
-}
 
-function Confirm-AdminPrivileges {
-  $current=New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-  return $current.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-}
 
-function Test-CommandAvailable {
-  param (
-      [Parameter(Mandatory = $True, Position = 0)]
-      [String] $Command
+
+
+function Get-SystemPaths {
+  [CmdletBinding()]
+  param(
+    [Parameter()]
+    [switch] $Process = $false,
+    [Parameter()]
+    [switch] $User = $false,
+    [Parameter()]
+    [switch] $Machine = $false,
+    [Parameter(HelpMessage="Filter paths that exists only", Mandatory=$false)]
+    [System.Nullable[Boolean]] $Exists
   )
-  return [Boolean](Get-Command $Command -ErrorAction Ignore)
+  process {
+    $Scopes=@("Process", "User", "Machine")
+
+    if (@($Process, $User, $Machine) -contains $true){
+      if (-not $Process){ $Scopes = $Scopes -ne 'Process'; }
+      if (-not $User)   { $Scopes = $Scopes -ne "User"; }
+      if (-not $Machine){ $Scopes = $Scopes -ne "Machine"; }
+    }
+
+    $results = foreach ($Scope in $Scopes){
+      # Write-Information $Scope
+      [Environment]::GetEnvironmentVariable("Path", $Scope).Split(';') `
+        | Where-Object {
+          if ([string]::IsNullOrEmpty($_)){ return $false; }
+          else { return (($null -eq $Exists) -or ((Test-Path $_) -eq $Exists)); }
+        }
+    }
+    $results | Select-Object -Unique
+  }
 }
 
-
-function Clear-SystemPaths {
+function Optimize-SystemPaths {
 
   process {
     $extraPaths = ''
@@ -62,12 +77,13 @@ function Add-SystemPath {
   param(
     [Parameter(Mandatory, Position=0)]
     [string] $path,
+    [ValidateSet("Process", "User", "Machine")]
     [Parameter(Position = 1,HelpMessage = "Scope of the environment variable (Process, User, Machine). Default is Process.")]
-    [string] $scope = "Process",
+    [string] $Scope = "Process",
     [switch] $before = $false
   )
   process {
-    $paths = [Environment]::GetEnvironmentVariable("Path", $scope)
+    $paths = [Environment]::GetEnvironmentVariable("Path", $Scope)
     if(($paths -like "*$path;*") -or ($paths -like "*$path")){
       Write-Output "Path already exists in scope."
       return 
@@ -75,15 +91,20 @@ function Add-SystemPath {
   
     if($before){ $paths = "$path;$paths"; } else { $paths = "$paths;$path"; }
   
-    [System.Environment]::SetEnvironmentVariable("Path", $paths, $scope)
+    [System.Environment]::SetEnvironmentVariable("Path", $paths, $Scope)
   }
 }
 
 function Remove-SystemPath {
   [CmdletBinding()]
   param(
-    [Parameter(Position=0, ValueFromPipeline=$true, Mandatory=$true)][string] $path,
-    [Parameter(Position=1, Mandatory=$false)][string] $scope = "Process",
+    [Parameter(Position=0, ValueFromPipeline=$true, Mandatory=$true)]
+    [string] $path,
+    
+    [ValidateSet("Process", "User", "Machine")]
+    [Parameter(Position=1, Mandatory=$false)]
+    [string] $Scope = "Process",
+
     [switch] $all = $false
   )
   process {
@@ -93,10 +114,10 @@ function Remove-SystemPath {
       Remove-SystemPath $path -Scope "Machine"
       return
     }
-    $syspaths = [Environment]::GetEnvironmentVariable("Path", $scope)
+    $syspaths = [Environment]::GetEnvironmentVariable("Path", $Scope)
     if($syspaths -ne $syspaths.Replace("$path", "")){
       
-      if ($scope -eq "machine") {
+      if ($Scope -eq "machine") {
         $principal=New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
         $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
@@ -110,8 +131,8 @@ function Remove-SystemPath {
         }
       }
         
-      [System.Environment]::SetEnvironmentVariable("Path", $syspaths.Replace("$path;", ""), $scope)
-      Write-Host " * Removed $path from $scope variables."
+      [System.Environment]::SetEnvironmentVariable("Path", $syspaths.Replace("$path;", ""), $Scope)
+      Write-Host " * Removed $path from $Scope variables."
     }
   }
 }
@@ -120,17 +141,20 @@ function Remove-SystemPath {
 function Search-SystemPath {
   [CmdletBinding()]
   param(
-    [Parameter()][string] $scope = "process",
+    [ValidateSet("Process", "User", "Machine")]
+    [Parameter()]
+    [string] $Scope = "process",
+
     [Parameter(ValueFromRemainingArguments = $true)][array] $paths = @()
   )
   process {
     $paths2 = @("")
     $paths2.CopyTo()
-    if ($scope -and (@("process", "user", "machine") -notcontains $scope.ToLower())) {
-      $paths.Add($scope.Clone())
-      $scope = "process"
+    if ($Scope -and (@("process", "user", "machine") -notcontains $Scope.ToLower())) {
+      $paths.Add($Scope.Clone())
+      $Scope = "process"
     }
-    $current = [Environment]::GetEnvironmentVariable("Path", $scope).Split(';')
+    $current = [Environment]::GetEnvironmentVariable("Path", $Scope).Split(';')
 
     foreach($p in $paths){
       foreach($c in $current){
@@ -143,10 +167,5 @@ function Search-SystemPath {
 
 
 
-
-Export-ModuleMember -Function Invoke-Elevated
-Export-ModuleMember -Function Confirm-AdminPrivileges
-Export-ModuleMember -Function Clear-SystemPaths
-Export-ModuleMember -Function Add-SystemPath
-Export-ModuleMember -Function Remove-SystemPath
-Export-ModuleMember -Function Search-SystemPath
+Export-ModuleMember -Function *-SystemPaths
+Export-ModuleMember -Function *-SystemPath
