@@ -105,3 +105,7 @@ function Set-IniValue {
   }
   return $ini
 }
+
+
+Export-ModuleMember -Function Get-IniContent, Out-IniFile, Set-IniValue
+

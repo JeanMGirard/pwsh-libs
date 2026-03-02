@@ -72,6 +72,7 @@ function Optimize-SystemPaths {
     #
   }
 }
+
 function Add-SystemPath {
   [CmdletBinding()]
   param(

@@ -16,3 +16,13 @@ winget import -i winget.json
 ```shell
 Get-Content ./winget.json | ConvertFrom-Json | ForEach-Object { $_.Sources.Packages }
 ```
+
+## Alternatives
+
+### Winget Import & Export
+
+```pwsh
+winget export -o winget.json
+winget import -i winget.json
+```
+

@@ -1,7 +1,7 @@
 
-Import-Module -Name "$PSScriptRoot/git.psm1"
-Import-Module -Name "$PSScriptRoot/windows.psm1"
-Import-Module -Name "$PSScriptRoot/windows.paths.psm1"
+Import-Module -Name "$PSScriptRoot/Git.psm1"
+Import-Module -Name "$PSScriptRoot/Windows.psm1"
+Import-Module -Name "$PSScriptRoot/SystemPaths.psm1"
 
 
 # $env:DOCKER_HOST = 'ssh://user@host'

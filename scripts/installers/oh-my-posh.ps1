@@ -1,6 +1,11 @@
 
 
-winget install  --scope machine -s winget JanDeDobbeleer.OhMyPosh
+try {
+    winget install -e --scope machine --accept-source-agreements --accept-package-agreements JanDeDobbeleer.OhMyPosh
+}
+catch {
+    Write-Error "Failed to install Oh My Posh. Error: $_"
+}
 
 # oh-my-posh init pwsh --config "~/.oh-my-posh.theme.omp.json" | Invoke-Expression
 # oh-my-posh config export --output ~/.oh-my-posh.theme.omp.json
@@ -16,17 +21,17 @@ winget install  --scope machine -s winget JanDeDobbeleer.OhMyPosh
 # Import-Module Terminal-Icons
 # Import-Module oh-my-posh
 # Set-PoshPrompt -Theme Aliens
-
-mkdir -p ~/.config ~/.config/oh-my-posh ~/.config/oh-my-posh/themes
-
-
-oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH/grandpa-style.omp.json" | Invoke-Expression
-oh-my-posh config export --output ~/.config/oh-my-posh/themes/grandpa-style.omp.json
-oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH/sonicboom_light.omp.json" | Invoke-Expression
-oh-my-posh config export --output ~/.config/oh-my-posh/themes/sonicboom_light.omp.json
-oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH/sonicboom_dark.omp.json" | Invoke-Expression
-oh-my-posh config export --output ~/.config/oh-my-posh/themes/sonicboom_dark.omp.json
-
-
-
-oh-my-posh init pwsh --config ~/.config/oh-my-posh/theme.omp.json | Invoke-Expression
+#
+#mkdir -p ~/.config ~/.config/oh-my-posh ~/.config/oh-my-posh/themes
+#
+#
+#oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH/grandpa-style.omp.json" | Invoke-Expression
+#oh-my-posh config export --output ~/.config/oh-my-posh/themes/grandpa-style.omp.json
+#oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH/sonicboom_light.omp.json" | Invoke-Expression
+#oh-my-posh config export --output ~/.config/oh-my-posh/themes/sonicboom_light.omp.json
+#oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH/sonicboom_dark.omp.json" | Invoke-Expression
+#oh-my-posh config export --output ~/.config/oh-my-posh/themes/sonicboom_dark.omp.json
+#
+#
+#
+#oh-my-posh init pwsh --config ~/.config/oh-my-posh/theme.omp.json | Invoke-Expression
