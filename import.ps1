@@ -7,19 +7,18 @@
 # Write-Host "Importing"
 $imports = @(
   "posh-git",
-  "libs/1password.psm1", 
-  "libs/aliases.psm1", 
-  "libs/aws.psm1", 
-  "libs/docker.psm1",
-  "libs/fs.psm1",
-  "libs/git.psm1",
-  "libs/history.psm1",
-  "libs/jenkins.psm1",
-  "libs/k8s.psm1",
-  "libs/k8s.helm.psm1",
-  "libs/search.psm1",
-  "libs/vault.psm1",
-  "libs/wsl.psm1",
+  "modules/1Password.psm1",
+  "modules/Aliases.psm1",
+  "modules/Aws.psm1",
+  "modules/Docker.psm1",
+  "modules/Git.psm1",
+  "modules/History.psm1",
+#  "libs/Jenkins.psm1",
+  "modules/K8s.psm1",
+  "modules/K8sHelm.psm1",
+  "modules/Search.psm1",
+  "modules/Vault.psm1",
+  "modules/Wsl.psm1",
   "aliases.ps1"
 )
 

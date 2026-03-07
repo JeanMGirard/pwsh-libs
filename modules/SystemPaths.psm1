@@ -1,9 +1,6 @@
 
 
 
-
-
-
 function Get-SystemPaths {
   [CmdletBinding()]
   param(
@@ -20,14 +17,14 @@ function Get-SystemPaths {
     $Scopes=@("Process", "User", "Machine")
 
     if (@($Process, $User, $Machine) -contains $true){
-      if (-not $Process){ $Scopes = $Scopes -ne 'Process'; }
+      if (-not $Process){ $Scopes = $Scopes -ne "Process"; }
       if (-not $User)   { $Scopes = $Scopes -ne "User"; }
       if (-not $Machine){ $Scopes = $Scopes -ne "Machine"; }
     }
 
     $results = foreach ($Scope in $Scopes){
       # Write-Information $Scope
-      [Environment]::GetEnvironmentVariable("Path", $Scope).Split(';') `
+      [Environment]::GetEnvironmentVariable("Path", $Scope).Split(";") `
         | Where-Object {
           if ([string]::IsNullOrEmpty($_)){ return $false; }
           else { return (($null -eq $Exists) -or ((Test-Path $_) -eq $Exists)); }
@@ -37,39 +34,133 @@ function Get-SystemPaths {
   }
 }
 
+
 function Optimize-SystemPaths {
+  [CmdletBinding()]
+  param(
+    [Parameter(HelpMessage="Dry run. Show the changes that would be applied without actually applying them.")]
+    [switch] $DryRun = $false,
+    [Parameter(HelpMessage="Apply changes to User scope")]
+    [switch] $User = $false,
+    [Parameter(HelpMessage="Apply changes to Machine scope")]
+    [switch] $Machine = $false
+  )
+  begin {
+    $SystemPathShortcuts = @{
+        "LOCALAPPDATA" = "${HOME}\AppData\Local"
+        "CHOCOLATEYINSTALL" = "${env:ProgramData}\Chocolatey"
+        "LOCALWINGET"  = "${HOME}\AppData\Local\Microsoft\WinGet\Packages"
+        "ProgramData" = $env:ProgramData
+        "ProgramFiles" = $env:ProgramFiles
+        "GOPATH" = $env:GOPATH
+        "OneDrive" = $env:OneDrive
+        "SYS32" = "C:\WINDOWS\System32"
+    }
+    foreach ($shortcut in $SystemPathShortcuts.GetEnumerator()) {
+      $oldValue = [System.Environment]::GetEnvironmentVariable($shortcut.Key)
 
+      # If the variable already exists and has a different value, we skip it to avoid overwriting existing shortcuts.
+      # This allows users to maintain their own custom shortcuts without interference.
+      if ($null -ne $oldValue -and $oldValue -ne $shortcut.Value) {
+        $SystemPathShortcuts[$shortcut.Key] = $oldValue
+        $shortcut.Value = $oldValue
+      }
+
+      # Remove Bad entries that do not exist on the system to avoid creating shortcuts for non-existent paths.
+      if ($null -eq $shortcut.Value -or -not (Test-Path $shortcut.Value)){
+        $SystemPathShortcuts.Remove($shortcut.Key)
+      }
+    }
+  }
   process {
-    $extraPaths = ''
-    $MachineForUser = ([Environment]::GetEnvironmentVariable("Path", "Machine") -split ';' | Where-Object { $_.StartsWith('C:\Users') }) -join ';'
-    $UserNoDupes = ([Environment]::GetEnvironmentVariable("Path", "User") + ";" + $MachineForUser) -split ';' `
-      | Where-Object { $_.StartsWith('C:\Users')  -and (Test-Path -Path $_) } `
-      | Sort-Object | ForEach-Object `
-        -Begin   { $oht = [ordered] @{} } `
-        -Process { $oht[$_] = $true } `
-        -End     { $oht.Keys -join ';' }
-      
-    $extraPaths = ''
-    $UserForMachine = ([Environment]::GetEnvironmentVariable("Path", "User") -split ';' | Where-Object { ! $_.StartsWith('C:\Users') }) -join ';'
-    $MachineNoDupes = ([Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + $UserForMachine + ";" + $extraPaths) -split ';' `
-      | Where-Object { ! $_.StartsWith('C:\Users') -and (Test-Path -Path $_) } `
-      | Sort-Object | ForEach-Object `
-        -Begin   { $oht = [ordered] @{} } `
-        -Process { $oht[$_] = $true } `
-        -End     { $oht.Keys -join ';' }
+    # Write-Host $SystemPathShortcuts
+    if (-not $User -and -not $Machine){
+      Write-Warning "No scope specified. Use -User and/or -Machine to specify the scope of the optimization."
+      return
+    }
 
-      
-    [System.Environment]::SetEnvironmentVariable("Path", $UserNoDupes, "User")
-    [System.Environment]::SetEnvironmentVariable("Path", $MachineNoDupes, "Machine")
-    
-    # [System.Environment]::SetEnvironmentVariable("Path", (
-    #   [Environment]::GetEnvironmentVariable("Path", "Machine") + ';C:\Apps\Bin\pyenv\pyenv-win\bin;C:\Apps\Bin\pyenv\pyenv-win\shims'
-    # ), "Machine")
+    Write-Host "-------------------------------------------------------------"
+    Write-Host "Adding environment variable shortcuts for the following paths:" -ForegroundColor Green
 
-    # ======================================================================
-    # Remplaces long paths with system variables
-    # %ProgramFiles% %SystemRoot%
-    #
+    $shortcuts = @()
+    foreach ($shortcut in $SystemPathShortcuts.GetEnumerator()){
+      if ($null -eq $shortcut.Value -or -not (Test-Path $shortcut.Value)){
+        continue;
+      }
+
+      $sKey = $shortcut.Key
+      $userPath = $shortcut.Value.ToString()
+      $machinePath = $userPath.Replace("${HOME}", "%USERPROFILE%")
+
+      if ($userPath -eq $machinePath){ $userPath = $null; }
+      $shortcuts += [PSCustomObject] @{
+        Name = $sKey
+        UserValue = $userPath
+        MachineValue = $machinePath
+      }
+      if ($DryRun){ continue; }
+      if ($User -and $null -ne $userPath){
+        Write-Host "(User)    ${sKey}: $userPath" -ForegroundColor Green
+        [System.Environment]::SetEnvironmentVariable($sKey, $userPath, "User");
+      }
+      if ($Machine -and $null -ne $machinePath){
+        Write-Host "(Machine) ${sKey}: $machinePath" -ForegroundColor Green
+        [System.Environment]::SetEnvironmentVariable($sKey, $machinePath, "Machine");
+      }
+    }
+    $shortcuts | Format-Table -AutoSize -Property *
+    Write-Host "-------------------------------------------------------------"
+    Write-Host "Rewriting PATH environment variables" -ForegroundColor Green
+
+    $userPath = [System.Environment]::GetEnvironmentVariable("PATH", "User")
+    $machinePath = [System.Environment]::GetEnvironmentVariable("PATH", "Machine")
+    foreach ($shortcut in ($SystemPathShortcuts.GetEnumerator() | Sort-Object -Descending { $_.Value.Length } )) {
+      if ($null -eq $shortcut.Value -or -not (Test-Path $shortcut.Value)){
+        continue;
+      }
+      $sKey = $shortcut.Key
+      $sVal = $shortcut.Value
+
+      $userPath = $userPath.Replace($sVal, "%${sKey}%")
+      $userPath = $userPath.Replace($sVal.Replace("${HOME}", "%USERPROFILE%"), "%${sKey}%")
+      $machinePath = $machinePath.Replace($sVal, "%${sKey}%")
+      $machinePath = $machinePath.Replace($sVal.Replace("${HOME}", "%USERPROFILE%"), "%${sKey}%")
+    }
+    $machinePaths = $machinePath.Replace("${HOME}", "%USERPROFILE%").Split(";") `
+      | Where-Object { -not ([string]::IsNullOrEmpty($_)) } `
+      | ForEach-Object { $_.TrimEnd('/').TrimEnd('\') }
+    $userPaths = $userPath.Replace("${HOME}", "%USERPROFILE%").Split(";") `
+      | Where-Object { -not ([string]::IsNullOrEmpty($_)) -and -not $machinePaths.Contains($_) } `
+      | ForEach-Object { $_.TrimEnd('/').TrimEnd('\') }
+
+    $userPath = $userPaths -join ";"
+    $machinePath = $machinePaths -join ";"
+
+    if ($DryRun){
+      ($userPaths | ForEach-Object { [PSCustomObject] @{ Scope = "User"; Path = $_ } }) `
+       + ($machinePaths | ForEach-Object { [PSCustomObject] @{ Scope = "Machine"; Path = $_ } }) `
+       | Format-Table -AutoSize
+      return
+    }
+
+    if ($User){
+      Write-Host "___ Updating PATH variable (User) _____________________________" -ForegroundColor Green
+      Write-Host ([System.Environment]::GetEnvironmentVariable("PATH", "User")) -ForegroundColor Yellow
+      Write-Host $userPath -ForegroundColor Green
+
+      [System.Environment]::SetEnvironmentVariable("PATH", $userPath, "User")
+      Write-Host ""
+      Write-Host ""
+    }
+    if ($Machine){
+      Write-Host "___ Updating PATH variable (Machine) _____________________________" -ForegroundColor Green
+      Write-Host ([System.Environment]::GetEnvironmentVariable("PATH", "Machine")) -ForegroundColor Yellow
+      Write-Host $machinePath -ForegroundColor Green
+
+      [System.Environment]::SetEnvironmentVariable("PATH", $machinePath, "Machine")
+      Write-Host ""
+      Write-Host ""
+    }
   }
 }
 
@@ -77,20 +168,20 @@ function Add-SystemPath {
   [CmdletBinding()]
   param(
     [Parameter(Mandatory, Position=0)]
-    [string] $path,
+    [string] $Path,
     [ValidateSet("Process", "User", "Machine")]
     [Parameter(Position = 1,HelpMessage = "Scope of the environment variable (Process, User, Machine). Default is Process.")]
     [string] $Scope = "Process",
-    [switch] $before = $false
+    [switch] $Before = $false
   )
   process {
-    $paths = [Environment]::GetEnvironmentVariable("Path", $Scope)
-    if(($paths -like "*$path;*") -or ($paths -like "*$path")){
+    $paths = [Environment]::GetEnvironmentVariable("PATH", $Scope)
+    if(($paths -like "*$Path;*") -or ($paths -like "*$Path")){
       Write-Output "Path already exists in scope."
       return 
     }
   
-    if($before){ $paths = "$path;$paths"; } else { $paths = "$paths;$path"; }
+    if($Before){ $paths = "$Path;$paths"; } else { $paths = "$paths;$Path"; }
   
     [System.Environment]::SetEnvironmentVariable("Path", $paths, $Scope)
   }
@@ -127,8 +218,8 @@ function Remove-SystemPath {
           return
 
           # $scriptblock = "[System.Environment]::SetEnvironmentVariable(`"Path`", ([Environment]::GetEnvironmentVariable(`"Path`", `"${scope}`")).Replace(`"${path};`", `"`"), `"${scope}`"); exit 0;"
-          # $sh = new-object -com 'Shell.Application'
-          # $sh.ShellExecute('powershell', "-Command '$scriptblock'", '', 'runas')
+          # $sh = new-object -com "Shell.Application"
+          # $sh.ShellExecute("powershell", "-Command "$scriptblock"", "", "runas")
         }
       }
         
@@ -137,7 +228,6 @@ function Remove-SystemPath {
     }
   }
 }
-
 
 function Search-SystemPath {
   [CmdletBinding()]
@@ -155,7 +245,7 @@ function Search-SystemPath {
       $paths.Add($Scope.Clone())
       $Scope = "process"
     }
-    $current = [Environment]::GetEnvironmentVariable("Path", $Scope).Split(';')
+    $current = [Environment]::GetEnvironmentVariable("Path", $Scope).Split(";")
 
     foreach($p in $paths){
       foreach($c in $current){
@@ -164,8 +254,6 @@ function Search-SystemPath {
     }
   }
 }
-
-
 
 
 Export-ModuleMember -Function *-SystemPaths

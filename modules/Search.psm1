@@ -34,19 +34,19 @@ function Search-Term {
   }
 
   if($Online){
-    (("All", "Scripts") -contains $Type) ? (Set-Data 'Scripts' (Find-Script $Word @psArgs)) : $null
-    (("All", "Modules") -contains $Type) ? (Set-Data 'Modules' (Find-Module $Word @psArgs)) : $null
-    (("All", "Packages") -contains $Type) ? (Set-Data 'Packages' (Find-Package $Word @psArgs)) : $null
+    if(("All", "Scripts") -contains $Type) { Set-Data 'Scripts' (Find-Script $Word @psArgs); }
+    if(("All", "Modules") -contains $Type) { Set-Data 'Modules' (Find-Module $Word @psArgs); }
+    if(("All", "Packages") -contains $Type) { Set-Data 'Packages' (Find-Package $Word @psArgs); }
   } else {
-    (("All", "Scripts") -contains $Type) ? (Set-Data 'Scripts' (Get-InstalledScript $Word @psArgs)) : $null
-    (("All", "Modules") -contains $Type) ? (Set-Data 'Modules' (Get-InstalledModule $Word @psArgs)) : $null
-    (("All", "Packages") -contains $Type) ? (Set-Data 'Packages' (Get-Package $Word @psArgs)) : $null
+    if(("All", "Scripts") -contains $Type) { Set-Data 'Scripts' (Get-InstalledScript $Word @psArgs); }
+    if(("All", "Modules") -contains $Type) { Set-Data 'Modules' (Get-InstalledModule $Word @psArgs); }
+    if(("All", "Packages") -contains $Type) { Set-Data 'Packages' (Get-Package $Word @psArgs); }
   }
-  (("All", "Commands") -contains $Type) ? (Set-Data 'Commands' (Find-Command $Word @psArgs)) : $null
-  (("All", "Repositories") -contains $Type) ? (Set-Data 'Repositories' (Get-PSRepository $Word @psArgs)) : $null
-  (("All", "Variables") -contains $Type) ? (Set-Data 'Variables' (Get-Variable $Word @psArgs)) : $null
-  (("All", "Verbs") -contains $Type) ? (Set-Data 'Verbs' (Get-Verb $Word @psArgs)) : $null
-  (("All", "Aliases") -contains $Type) ? (Set-Data 'Aliases' (Get-Alias $Word @psArgs)) : $null
+  if(("All", "Commands") -contains $Type) { Set-Data 'Commands' (Find-Command $Word @psArgs); }
+  if(("All", "Repositories") -contains $Type) { Set-Data 'Repositories' (Get-PSRepository $Word @psArgs); }
+  if(("All", "Variables") -contains $Type) { Set-Data 'Variables' (Get-Variable $Word @psArgs); }
+  if(("All", "Verbs") -contains $Type) { Set-Data 'Verbs' (Get-Verb $Word @psArgs); }
+  if(("All", "Aliases") -contains $Type) { Set-Data 'Aliases' (Get-Alias $Word @psArgs); }
 
   Write-Data "Scripts" $info.Scripts
   Write-Data "Modules" $info.Modules
