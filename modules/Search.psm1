@@ -59,7 +59,6 @@ function Search-Term {
 
   return $info
 }
-
 function Search-Verbs {  Get-Verb | Sort-Object -Property Verb | Format-Wide -Property Verb -Column 4; }
 
 function Search-PSGallery {
@@ -70,6 +69,12 @@ function Search-PSGallery {
   Find-Module -Name *$name*  -Repository PSGallery
 }
 
+function Get-Properties {
+  param(
+    [parameter(position=0)][Object]$Object
+  )
+  $Object | Get-Member -MemberType Properties
+}
 
 
 Set-Alias -Name verbs -Value Search-Verbs

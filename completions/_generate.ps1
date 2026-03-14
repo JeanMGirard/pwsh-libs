@@ -1,5 +1,11 @@
+[CmdletBinding()]
+param(
+    [Parameter(HelpMessage="Skip regenerating completions files")]
+    [switch]$SkipGenerate=$false
+)
 
 $ALL_COMPLETIONS_FILE = "$PSScriptRoot/_all.ps1"
+$ALL_COMPLETIONS_FILE2 = "$PSScriptRoot/_all_pre7.ps1"
 
 
 $CommandsWithCompletions = @(
@@ -27,11 +33,13 @@ $CommandsWithCompletions = @(
   "atlantis",
   "azcopy",
   "consul",
-  "minikube"
+  "minikube",
+  "k9s"
 )
 
 # Generates completion files -----------------------------------------------------------------
-foreach ($cli in ($CommandsWithCompletions | Sort-Object { (Test-Path (Join-Path -Path $PSScriptRoot -ChildPath "$_.ps1")) })  ){
+foreach ($cli in ($CommandsWithCompletions | Where-Object { -not $SkipGenerate } `
+    | Sort-Object { (Test-Path (Join-Path -Path $PSScriptRoot -ChildPath "$_.ps1")) })  ){
   Write-Host "Generation Completion for $cli"
 
   if (Get-Command $cli -ErrorAction SilentlyContinue){
@@ -48,13 +56,24 @@ foreach ($cli in ($CommandsWithCompletions | Sort-Object { (Test-Path (Join-Path
 
 
 # Generates _all.ps1 ------------------------------------------------------------------------
-if (Test-Path $ALL_COMPLETIONS_FILE) {
-  Remove-Item -Path $ALL_COMPLETIONS_FILE
-}
+Remove-Item -Path $ALL_COMPLETIONS_FILE -ErrorAction SilentlyContinue -Force
+Remove-Item -Path $ALL_COMPLETIONS_FILE2 -ErrorAction SilentlyContinue -Force
+
 
 Get-ChildItem -Path $PSScriptRoot -Filter "*.ps1" | Where-Object { -not $_.Name.startsWith('_') } | ForEach-Object {
-  Add-Content -Path $ALL_COMPLETIONS_FILE -Value ([Environment]::NewLine)
-  Add-Content -Path $ALL_COMPLETIONS_FILE -Value (Get-Content -Path $_.FullName)
+  $scriptPath = $_.FullName
+  $cliName = $_.BaseName
+  try {
+      . $scriptPath
+      Write-Host "completion sourced successfully ($cliName)."
+      Add-Content -Path $ALL_COMPLETIONS_FILE -Value ([Environment]::NewLine)
+      Add-Content -Path $ALL_COMPLETIONS_FILE -Value (Get-Content -Path $scriptPath)
+  }
+  catch {
+      Write-Host "Completion outdated ($cliName)."
+      Add-Content -Path $ALL_COMPLETIONS_FILE2 -Value ([Environment]::NewLine)
+      Add-Content -Path $ALL_COMPLETIONS_FILE2 -Value (Get-Content -Path $scriptPath)
+  }
 }
 
 # --------------------------------------------------------------------------------------------

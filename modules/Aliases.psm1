@@ -8,7 +8,7 @@ function Find-Aliases{
         [Parameter()][switch]$Pretty=$false,
         [Parameter()][switch]$Definitions=$false
     )
-    $ALIASES=(Get-Alias | Where-Object { $_.HelpUri -notmatch 'microsoft' } | Sort-Object -Property Name)
+    $ALIASES=(Get-Alias | Where-Object { $null -eq $_.HelpUri -or $_.HelpUri -notmatch 'microsoft' } | Sort-Object -Property Name)
 
     if ($Pretty){
       foreach ($let in ($ALIASES | Group-Object -Property { $_.Name.Substring(0, 1) })) { 

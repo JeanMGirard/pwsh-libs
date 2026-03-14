@@ -5,13 +5,19 @@
 # Utilities
 # =================================================================
 #function cht   { curl -sL https://cht.sh/$1 }
-function cheat { curl -sL https://cheat.sh/$1 }
+function Invoke-Cheat { curl -sL https://cheat.sh/$1 }
+function Invoke-Copilot{ gh copilot @args; }
+
+Set-Alias -Name cheat -Value Invoke-Cheat
+Set-Alias -Name copilot -Value Invoke-Copilot
+
 
 # =================================================================
 # Java
 # =================================================================
-function mvnw { mvn wrapper:wrapper @args; }
-Set-Alias -Name maven -Value mvn
+function Invoke-Maven { mvn wrapper:wrapper @args; }
+Set-Alias -Name mvn -Value Invoke-Maven
+Set-Alias -Name maven -Value Invoke-Maven
 
 
 # =================================================================
@@ -20,10 +26,13 @@ Set-Alias -Name maven -Value mvn
 # Remove-Alias -Name dkc   
 #Set-Alias -Name python -Value Python-Launcher
 
-Set-Alias -Name dk      -Value docker
-function        dkc { docker compose @args; }
-Set-Alias -Name dkm     -Value docker-machine
+function Invoke-DockerCompose { docker compose @args; }
 
+
+
+Set-Alias -Name dk      -Value docker
+Set-Alias -Name dkc     -Value Invoke-DockerCompose
+Set-Alias -Name dkm     -Value docker-machine
 Set-Alias -Name git     -Value hub
 Set-Alias -Name faas    -Value faas-cli
 Set-Alias -Name g       -Value hub
@@ -32,7 +41,6 @@ Set-Alias -Name gacp    -Value git-add-commit-push
 Set-Alias -Name gf      -Value git-flow
 Set-Alias -Name gitc    -Value git-commit
 Set-Alias -Name gitf    -Value git-flow
-
 Set-Alias -Name kc      -Value kubectl
 Set-Alias -Name kctl    -Value kubectl
 function        kctl-a   { kubectl apply @args; }
@@ -94,7 +102,7 @@ function mvnw { mvn wrapper:wrapper @args; }
 # token:       Extension token
 # user-stars:  Extension user-stars
 # webhook:     Extension webhook
-function copilot{ gh copilot @args; }
+
 
 
 
